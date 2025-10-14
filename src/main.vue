@@ -208,7 +208,7 @@
 				.event-badge {{ fmt(events.resubs.length, 'total resub') }}
 				button(v-if="settings.demo_showButtons" @click="demo('resubs')") Demo
 			.event-items(ref="eventRefs.resubs")
-				OverseerResubs(
+				OverseerEventResubs(
 					v-for="e in events.resubs"
 					:key="e.eventId"
 					:e="e"
@@ -227,37 +227,13 @@
 				) {{ n(totalBits) }} total Bits
 				button(v-if="settings.demo_showButtons" @click="demo('bits')") Demo
 			.event-items(ref="eventRefs.bits")
-				.event-item(v-for="e in filteredBits" :key="e.eventId")
-					.event-item-meta
-						OverseerTimestamp(:date="e.timestamp")
-						.badge.badge-bits(
-							v-if="e.data.bits > 0"
-							:level="getBadgeBitsLevel(e.data)"
-							:title="fmt(e.data.bits, 'bit')"
-						)
-							span {{ n(e.data.bits) }}
-						.badge.badge-bits-reward(
-							v-else=""
-							:type="e.data.rewardType"
-							:title="getBadgeBitsRewardTitle(e.data)"
-						)
-							span {{ getBadgeBitsReward(e.data) }}
-					.event-item-data(
-						:title="`Event in [${e.channel.id}] ${e.channel.login}`"
-					)
-						.username {{ formatUsername(e.user) }}
-						=' '
-						OverseerMessage(
-							:text="e.data.text"
-							:emotes="e.data.emotes"
-							:isCheer="true"
-							:rewardType="e.data.rewardType"
-							:rewardDetail="e.data.rewardDetail"
-							@clickEmote="showEmote"
-							:cheermotes="getCheermotesCached(e.channel.id)"
-							:combineCheermotes="settings.bits_combineCheermotes"
-							:debugLog="settings.debug_message_doLog"
-						)
+				OverseerEventBits(
+					v-for="e in filteredBits"
+					:key="e.eventId"
+					:e="e"
+					:settings="settings"
+					@clickEmote="showEmote"
+				)
 			.more-events(@click="scrollEvents(eventRefs.bits)")
 #big-emote(:show="Boolean(bigEmoteState.image)")
 	#big-emote-scrim(@click.self="bigEmoteClose")
@@ -281,14 +257,20 @@
 	import { ref, shallowRef, reactive, watch, computed, useTemplateRef, nextTick, onMounted } from 'vue';
 	import tmi from 'https://unpkg.com/@tmi.js/chat@0.6.1/dist/tmi.browser.min.mjs';
 	
-	import { formatUsername, s, n, fmt, getBadgeSubTier, getBadgeSubTierTitle, getBadgeSubIsHighlighted, getBadgeSubMonths, getBadgeSubMonthsTitle } from 'https://codepen.io/Alca/pen/GgoMOOG.js';
+	import {
+		STORAGE_KEYS,
+		s, n, fmt, formatUsername,
+		getBadgeSubTier, getBadgeSubTierTitle, getBadgeSubIsHighlighted, getBadgeSubMonths, getBadgeSubMonthsTitle,
+		loadCheermotes, getCheermotes,
+	} from 'https://codepen.io/Alca/pen/GgoMOOG.js';
 	
 	import OverseerTimestamp from 'https://codepen.io/Alca/pen/RNrVBxO.js';
 	import OverseerMessage from 'https://codepen.io/Alca/pen/KwVmEXg.js';
 	
 	import OverseerEventNewSubs from 'https://codepen.io/Alca/pen/ogbGoew.js';
 	import OverseerEventRaids from 'https://codepen.io/Alca/pen/vELeWMa.js';
-	import OverseerResubs from 'https://codepen.io/Alca/pen/KwVXZMz.js';
+	import OverseerEventResubs from 'https://codepen.io/Alca/pen/KwVXZMz.js';
+	import OverseerEventBits from 'https://codepen.io/Alca/pen/xbZXpPz.js';
 	
 	const eventRefs = {
 		newSubs: useTemplateRef('eventRefs.newSubs'),
@@ -296,11 +278,6 @@
 		raids: useTemplateRef('eventRefs.raids'),
 		resubs: useTemplateRef('eventRefs.resubs'),
 		bits: useTemplateRef('eventRefs.bits'),
-	};
-	
-	const STORAGE_KEYS = {
-		settings: 'overseer-settings',
-		cheermoteBroadcaster: 'overseer-cheermote-broadcasters',
 	};
 	
 	const settingsIsOpen = ref(false);
@@ -601,31 +578,6 @@
 		return `${fmt(totalPowerUps.value, 'Power-Up')}, ${fmt(cheersCount, 'Cheer')}`;
 	});
 	
-	function getBadgeBitsLevel(data) {
-		const bits = typeof data === 'number' ? data : data.bits;
-		if(bits >= 100_000) { return 100_000; }
-		if(bits >=  10_000) { return  10_000; }
-		if(bits >=   5_000) { return   5_000; }
-		if(bits >=   1_000) { return   1_000; }
-		if(bits >=     100) { return     100; }
-		return 1;
-	}
-	function getBadgeBitsReward(data) {
-		const isGE = data.rewardType === 'gigantifiedEmote';
-		if(isGE && settings.bits_rewardCost_gigantifiedEmote) {
-			return settings.bits_rewardCost_gigantifiedEmote;
-		}
-		else if(!isGE && settings.bits_rewardCost_messageEffects) {
-			return settings.bits_rewardCost_messageEffects;
-		}
-		return isGE ? 'GE' : 'ME';
-	}
-	function getBadgeBitsRewardTitle(data) {
-		return data.rewardType === 'gigantifiedEmote'
-			? 'Gigantified Emote'
-			: `Message Effect (${data.rewardDetail})`;
-	}
-	
 	function showEmote({ id, name, image }) {
 		bigEmoteState.id = id;
 		bigEmoteState.name = name;
@@ -668,85 +620,7 @@
 		}, m.createdAt);
 	}
 	
-	const cheermotesCache = new Map();
-	const cheermotesDefault = new Map([ 'Cheer', 'DoodleCheer', 'cheerwhal', 'Corgo', 'Scoops',
-		'uni', 'ShowLove', 'Party', 'SeemsGood', 'Pride', 'Kappa', 'FrankerZ', 'HeyGuys',
-		'DansGame', 'TriHard', 'Kreygasm', '4Head', 'SwiftRage', 'NotLikeThis', 'FailFish',
-		'VoHiYo', 'PJSalt', 'MrDestructoid', 'bday', 'RIPCheer', 'Shamrock', 'BitBoss',
-		'Streamlabs', 'Muxy', 'HolidayCheer', 'Goal', 'Anon', 'Charity'
-	].map(prefix => {
-		const levels = [ 'Cheer', 'DoodleCheer' ].includes(prefix)
-			? [ 1, 100, 1_000, 5_000, 10_000, 100_000 ]
-			: [ 1, 100, 1_000, 5_000, 10_000 ];
-		return [
-			prefix.toLowerCase(),
-			levels.map(level => [
-				`https://d3aqoihi2n8ty8.cloudfront.net/actions/${prefix.toLowerCase()}/dark/static/${level}/1.png`,
-				`https://d3aqoihi2n8ty8.cloudfront.net/actions/${prefix.toLowerCase()}/dark/animated/${level}/1.gif`,
-			])
-		];
-	}));
 	loadCheermotes();
-	function loadCheermotes() {
-		const json = localStorage.getItem(STORAGE_KEYS.cheermoteBroadcaster);
-		if(!json) {
-			return;
-		}
-		const data = JSON.parse(json);
-		data.forEach(([ channelId, channelPrefix, cheermoteId ]) => {
-			if(!channelPrefix) {
-				cheermotesCache.set(channelId, cheermotesDefault);
-				return;
-			}
-			const baseUrl = `https://d3aqoihi2n8ty8.cloudfront.net/partner-actions/${cheermoteId}`;
-			const channelCheermotes = [ 1, 100, 1_000, 5_000, 10_000 ].map(level => [ `${baseUrl}/${level}/dark/static/1.png`, `${baseUrl}/${level}/dark/animated/1.gif` ]);
-			const map = new Map(function*() { yield [ channelPrefix, channelCheermotes ]; yield* cheermotesDefault; }());
-			cheermotesCache.set(channelId, map);
-		});
-	}
-	function saveCheermotes() {
-		const data = [ ...cheermotesCache.entries().map(([ channelId, channelCheermotes ]) => {
-			const diff = new Set(channelCheermotes.keys()).difference(new Set(cheermotesDefault.keys()));
-			const channelPrefix = diff.values().next().value;
-			const cheermote = channelPrefix ? channelCheermotes.get(channelPrefix) : [];
-			if(!cheermote.length) {
-				return [ channelId, '', '' ];
-			}
-			const first = cheermote[0][0];
-			const match = first.match(/^https:\/\/d3aqoihi2n8ty8\.cloudfront\.net\/partner-actions\/([^\/]+\/[^\/]+)\/\d+\/dark\/(?:static|animated)\/1.(?:png|gif)$/i);
-			const cheermoteId = match ? match[1] : '';
-			return [ channelId, channelPrefix, cheermoteId ];
-		}) ];
-		localStorage.setItem(STORAGE_KEYS.cheermoteBroadcaster, JSON.stringify(data));
-	}
-	async function getCheermotes(broadcasterId) {
-		const existing = cheermotesCache.get(broadcasterId);
-		if(existing) {
-			return existing;
-		}
-		const qs = new URLSearchParams({ broadcaster_id: broadcasterId });
-		const url = `https://helix-proxy.alca.tv/bits/cheermotes?${qs}`;
-		const res = await fetch(url);
-		if(!res.ok) {
-			return cheermotesDefault;
-		}
-		const json = await res.json();
-		const data = new Map(json.data.map(n => [
-			n.prefix.toLowerCase(),
-			n.tiers.map(n => [ n.images.dark.static[1], n.images.dark.animated[1] ])
-		]));
-		cheermotesCache.set(broadcasterId, data);
-		saveCheermotes();
-		return data;
-	}
-	function getCheermotesCached(broadcasterId) {
-		const existing = cheermotesCache.get(broadcasterId);
-		if(existing) {
-			return existing;
-		}
-		getCheermotes(broadcasterId).catch(console.error);
-		return cheermotesDefault;
-	}
 	
 	const client = new tmi.Client({
 		channels: []
