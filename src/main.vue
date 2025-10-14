@@ -87,21 +87,7 @@
 				.event-badge {{ fmt(events.newSubs.length, 'new sub') }}
 				button(v-if="settings.demo_showButtons" @click="demo('newSubs')") Demo
 			.event-items(ref="eventRefs.newSubs")
-				.event-item(v-for="e in events.newSubs" :key="e.eventId")
-					.event-item-meta
-						OverseerTimestamp(:date="e.timestamp")
-						.badge.badge-tier(
-							:level="e.data.tier"
-							:title="getBadgeSubTierTitle(e.data)"
-						) {{ getBadgeSubTier(e.data) }}
-					.event-item-data(
-						:title="`Event in [${e.channel.id}] ${e.channel.login}`"
-					)
-						.username {{ formatUsername(e.user) }}
-						template(v-if="e.data.months > 1")
-							| {{ ' ' }}
-							.badge {{ n(e.data.months) }}
-							=' months in advance'
+				OverseerEventNewSubs(v-for="e in events.newSubs" :key="e.eventId" :e="e")
 			.more-events(@click="scrollEvents(eventRefs.newSubs)")
 		.event-container
 			.event-title
@@ -325,6 +311,8 @@
 	
 	import OverseerTimestamp from 'https://codepen.io/Alca/pen/RNrVBxO.js';
 	import OverseerMessage from 'https://codepen.io/Alca/pen/KwVmEXg.js';
+	
+	import OverseerEventNewSubs from 'https://codepen.io/Alca/pen/ogbGoew.js';
 	
 	const eventRefs = {
 		newSubs: useTemplateRef('eventRefs.newSubs'),
