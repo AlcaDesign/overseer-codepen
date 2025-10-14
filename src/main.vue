@@ -199,16 +199,7 @@
 				.event-badge {{ fmt(events.raids.length, 'total raid') }}
 				button(v-if="settings.demo_showButtons" @click="demo('raids')") Demo
 			.event-items(ref="eventRefs.raids")
-				.event-item(v-for="e in events.raids" :key="e.eventId")
-					.event-item-meta
-						OverseerTimestamp(:date="e.timestamp")
-						.badge(
-							:title="fmt(e.data.viewers, 'viewer')"
-						) {{ n(e.data.viewers) }}
-					.event-item-data(
-						:title="`Event in [${e.channel.id}] ${e.channel.login}`"
-					)
-						.username {{ formatUsername(e.user) }}
+				OverseerEventRaids(v-for="e in events.raids" :key="e.eventId" :e="e")
 			.more-events(@click="scrollEvents(eventRefs.newSubs)")
 	.event-container-row
 		.event-container
@@ -309,10 +300,13 @@
 	import { ref, shallowRef, reactive, watch, computed, useTemplateRef, nextTick, onMounted } from 'vue';
 	import tmi from 'https://unpkg.com/@tmi.js/chat@0.6.1/dist/tmi.browser.min.mjs';
 	
+	import { formatUsername, s, n, fmt, getBadgeSubTier, getBadgeSubTierTitle } from 'https://codepen.io/Alca/pen/GgoMOOG.js';
+	
 	import OverseerTimestamp from 'https://codepen.io/Alca/pen/RNrVBxO.js';
 	import OverseerMessage from 'https://codepen.io/Alca/pen/KwVmEXg.js';
 	
 	import OverseerEventNewSubs from 'https://codepen.io/Alca/pen/ogbGoew.js';
+	import OverseerEventRaids from 'https://codepen.io/Alca/pen/vELeWMa.js';
 	
 	const eventRefs = {
 		newSubs: useTemplateRef('eventRefs.newSubs'),
@@ -625,12 +619,6 @@
 		return `${fmt(totalPowerUps.value, 'Power-Up')}, ${fmt(cheersCount, 'Cheer')}`;
 	});
 	
-	function getBadgeSubTier(data) {
-		return data.isPrime ? 'P' : `${data.tier}`;
-	}
-	function getBadgeSubTierTitle(data) {
-		return data.isPrime ? `Prime (Tier 1)` : `Tier ${data.tier}`;
-	}
 	function getBadgeSubMonths(data) {
 		return `${n(data.cumulativeMonths)}m`;
 	}
@@ -678,13 +666,6 @@
 		return data.rewardType === 'gigantifiedEmote'
 			? 'Gigantified Emote'
 			: `Message Effect (${data.rewardDetail})`;
-	}
-	
-	function formatUsername(user) {
-		if(user.display.toLowerCase().replaceAll(/\s/g, '') !== user.login) {
-			return `${user.display} (${user.login})`;
-		}
-		return user.display || user.login || '(unknown)';
 	}
 	
 	function showEmote({ id, name, image }) {
@@ -1077,16 +1058,6 @@
 				client.onIrcLine(irc);
 			}
 		}
-	}
-	
-	function s(value, word = '', pluralForm = '') {
-		return value === 1 ? word : pluralForm ? pluralForm : `${word}s`;
-	}
-	function n(value) {
-		return value.toLocaleString();
-	}
-	function fmt(value, word = '', pluralForm = '') {
-		return `${value.toLocaleString()} ${s(value, word, pluralForm)}`;
 	}
 </script>
 
