@@ -208,32 +208,13 @@
 				.event-badge {{ fmt(events.resubs.length, 'total resub') }}
 				button(v-if="settings.demo_showButtons" @click="demo('resubs')") Demo
 			.event-items(ref="eventRefs.resubs")
-				.event-item(v-for="e in events.resubs" :key="e.eventId")
-					.event-item-meta
-						OverseerTimestamp(:date="e.timestamp")
-						.badge.badge-tier(
-							:level="e.data.tier"
-							:title="getBadgeSubTierTitle(e.data)"
-						) {{ getBadgeSubTier(e.data) }}
-						.badge.badge-months(
-							:highlighted="getBadgeSubIsHighlighted(e.data)"
-							:title="getBadgeSubMonthsTitle(e.data)"
-						) {{ getBadgeSubMonths(e.data) }}
-						.badge.badge-gift(
-							v-if="e.data.gift"
-							:title="`Gifted by ${formatUsername(e.data.gift.gifter)}`"
-						) {{ `${n(e.data.gift.monthBeingRedeemed)}/${n(e.data.gift.months)}` }}
-					.event-item-data(
-						:title="`Event in [${e.channel.id}] ${e.channel.login}`"
-					)
-						.username {{ formatUsername(e.user) }}
-						=' '
-						OverseerMessage(
-							:text="e.data.text"
-							:emotes="e.data.emotes"
-							@clickEmote="showEmote"
-							:debugLog="settings.debug_message_doLog"
-						)
+				OverseerResubs(
+					v-for="e in events.resubs"
+					:key="e.eventId"
+					:e="e"
+					:settings="settings"
+					@clickEmote="showEmote"
+				)
 			.more-events(@click="scrollEvents(eventRefs.resubs)")
 		// .event-container
 			.event-title
@@ -300,13 +281,14 @@
 	import { ref, shallowRef, reactive, watch, computed, useTemplateRef, nextTick, onMounted } from 'vue';
 	import tmi from 'https://unpkg.com/@tmi.js/chat@0.6.1/dist/tmi.browser.min.mjs';
 	
-	import { formatUsername, s, n, fmt, getBadgeSubTier, getBadgeSubTierTitle } from 'https://codepen.io/Alca/pen/GgoMOOG.js';
+	import { formatUsername, s, n, fmt, getBadgeSubTier, getBadgeSubTierTitle, getBadgeSubIsHighlighted, getBadgeSubMonths, getBadgeSubMonthsTitle } from 'https://codepen.io/Alca/pen/GgoMOOG.js';
 	
 	import OverseerTimestamp from 'https://codepen.io/Alca/pen/RNrVBxO.js';
 	import OverseerMessage from 'https://codepen.io/Alca/pen/KwVmEXg.js';
 	
 	import OverseerEventNewSubs from 'https://codepen.io/Alca/pen/ogbGoew.js';
 	import OverseerEventRaids from 'https://codepen.io/Alca/pen/vELeWMa.js';
+	import OverseerResubs from 'https://codepen.io/Alca/pen/KwVXZMz.js';
 	
 	const eventRefs = {
 		newSubs: useTemplateRef('eventRefs.newSubs'),
@@ -619,30 +601,6 @@
 		return `${fmt(totalPowerUps.value, 'Power-Up')}, ${fmt(cheersCount, 'Cheer')}`;
 	});
 	
-	function getBadgeSubMonths(data) {
-		return `${n(data.cumulativeMonths)}m`;
-	}
-	function getBadgeSubMonthsTitle(data) {
-		const months = typeof data === 'number' ? data : data.cumulativeMonths;
-		const years = Math.floor(months / 12);
-		const monthsRemainder = months % 12;
-		
-		const monthsFormatted = fmt(months, 'month');
-		const yearsFormatted = fmt(years, 'year');
-		const monthsRemainderFormatted = fmt(monthsRemainder, 'month');
-		
-		if(monthsRemainder === 0) {
-			return `${monthsFormatted} (${yearsFormatted})`;
-		}
-		else if(years === 0) {
-			return `${monthsFormatted}`;
-		}
-		return `${monthsFormatted} (${yearsFormatted} ${monthsRemainderFormatted})`;
-	}
-	function getBadgeSubIsHighlighted(data) {
-		const value = typeof data === 'number' ? data : data.cumulativeMonths;
-		return value % 12 === 0 || value === 1;
-	}
 	function getBadgeBitsLevel(data) {
 		const bits = typeof data === 'number' ? data : data.bits;
 		if(bits >= 100_000) { return 100_000; }
