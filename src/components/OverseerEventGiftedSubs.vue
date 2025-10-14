@@ -53,8 +53,8 @@
 				label
 					input(
 						type="checkbox"
-						:checked="getGiftDetailsCheckbox(e.eventId)"
-						@change="setGiftDetailsCheckbox(e.eventId, $event.target.checked)"
+						:checked="getGiftDetailsCheckbox()"
+						@change="setGiftDetailsCheckbox($event.target.checked)"
 					)
 					span
 						.username {{ formatUsername(e.user) }}
@@ -109,7 +109,8 @@
 		}
 	});
 	
-	function getGiftDetailsCheckbox(eventId) {
+	function getGiftDetailsCheckbox() {
+		const eventId = props.e.eventId;
 		if(props.giftedSubsDetailsCheckboxMap.has(eventId)) {
 			return props.giftedSubsDetailsCheckboxMap.get(eventId);
 		}
@@ -117,7 +118,8 @@
 		props.giftedSubsDetailsCheckboxMap.set(eventId, newState);
 		return newState;
 	}
-	function setGiftDetailsCheckbox(eventId, newState) {
+	function setGiftDetailsCheckbox(newState) {
+		const eventId = props.e.eventId;
 		props.giftedSubsDetailsCheckboxMap.set(eventId, newState);
 	}
 	function getBadgeGiftLevel(data) {
