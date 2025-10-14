@@ -95,6 +95,10 @@
 	import OverseerTimestamp from 'https://codepen.io/Alca/pen/RNrVBxO.js';
 	
 	const props = defineProps({
+		settings: {
+			type: Object,
+			required: true,
+		},
 		e: {
 			type: Object,
 			required: true
@@ -109,7 +113,7 @@
 		if(props.giftedSubsDetailsCheckboxMap.has(eventId)) {
 			return props.giftedSubsDetailsCheckboxMap.get(eventId);
 		}
-		const newState = settings.giftSubs_autoExpand;
+		const newState = props.settings.giftSubs_autoExpand;
 		props.giftedSubsDetailsCheckboxMap.set(eventId, newState);
 		return newState;
 	}
