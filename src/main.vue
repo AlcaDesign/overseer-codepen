@@ -103,6 +103,7 @@
 					v-for="e in events.giftedSubs"
 					:key="e.eventId"
 					:e="e"
+					:settings="settings"
 					:giftedSubsDetailsCheckboxMap="giftedSubsDetailsCheckboxMap"
 				)
 			.more-events(@click="scrollEvents(eventRefs.giftedSubs)")
