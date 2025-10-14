@@ -1,0 +1,48 @@
+<template lang="pug">
+.event-item(v-if="e")
+	.event-item-meta
+		OverseerTimestamp(:date="e.timestamp")
+		.badge.badge-tier(
+			:level="e.data.tier"
+			:title="getBadgeSubTierTitle(e.data)"
+		) {{ getBadgeSubTier(e.data) }}
+		.badge.badge-months(
+			:highlighted="getBadgeSubIsHighlighted(e.data)"
+			:title="getBadgeSubMonthsTitle(e.data)"
+		) {{ getBadgeSubMonths(e.data) }}
+		.badge.badge-gift(
+			v-if="e.data.gift"
+			:title="`Gifted by ${formatUsername(e.data.gift.gifter)}`"
+		) {{ `${n(e.data.gift.monthBeingRedeemed)}/${n(e.data.gift.months)}` }}
+	.event-item-data(
+		:title="`Event in [${e.channel.id}] ${e.channel.login}`"
+	)
+		.username {{ formatUsername(e.user) }}
+		=' '
+		OverseerMessage(
+			:text="e.data.text"
+			:emotes="e.data.emotes"
+			@clickEmote="(...args) => $emit('clickEmote', ...args)"
+			:debugLog="settings.debug_message_doLog"
+		)
+</template>
+
+<script setup>
+	import { n, formatUsername, getBadgeSubTier, getBadgeSubTierTitle, getBadgeSubIsHighlighted, getBadgeSubMonths, getBadgeSubMonthsTitle } from 'https://codepen.io/Alca/pen/GgoMOOG.js';
+	import OverseerTimestamp from 'https://codepen.io/Alca/pen/RNrVBxO.js';
+	import OverseerMessage from 'https://codepen.io/Alca/pen/KwVmEXg.js';
+	
+	const props = defineProps({
+		settings: {
+			type: Object,
+			required: true,
+		},
+		e: {
+			type: Object,
+			required: true
+		},
+	});
+</script>
+
+<style lang="scss">
+</style>
