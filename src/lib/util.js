@@ -1,8 +1,9 @@
 export function formatUsername(user) {
-	if(user.display.toLowerCase().replaceAll(/\s/g, '') !== user.login) {
-		return `${user.display} (${user.login})`;
+	const display = user.display || user.login || '';
+	if(user.login && display.toLowerCase().replaceAll(/\s/g, '') !== user.login) {
+		return `${display} (${user.login})`;
 	}
-	return user.display || user.login || '(unknown)';
+	return display || '(unknown)';
 }
 export function getBadgeSubTier(data) {
 	return data.isPrime ? 'P' : `${data.tier}`;
