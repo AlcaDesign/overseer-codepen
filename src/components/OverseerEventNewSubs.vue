@@ -11,7 +11,7 @@
 	)
 		.username {{ formatUsername(e.user) }}
 		template(v-if="e.data.months > 1")
-			| {{ ' ' }}
+			| {{ ' for ' }}
 			.badge {{ n(e.data.months) }}
 			=' months in advance'
 </template>
