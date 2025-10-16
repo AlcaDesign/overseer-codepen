@@ -15,12 +15,16 @@
 			.icon(icon="settings")
 #settings(:showing="settingsIsOpen")
 	#settings-head
-		#settings-head-text Settings
+		#settings-head-text {{ settingsSearch.trim().length ? 'Settings (Filtered)' : 'Settings' }}
+		#settings-head-search
+			input(v-model="settingsSearch" placeholder="Search")
+			.button(@click="settingsSearch = ''")
+				.icon(icon="close")
 		#settings-head-buttons
 			.button(title="Close" @click="settingsIsOpen = false")
 				.icon(icon="close")
 	#settings-body
-		template(v-for="group in settingsDesc" :key="group.key")
+		template(v-for="group in settingsDescFiltered" :key="group.key")
 			h1 {{ group.name }}
 			.setting-desc(
 				v-for="item in [ ...group.list, ...group.sub.flatMap(n => [ { type: 'sub', key: n.key, name: n.name }, ...n.list ]) ]"
@@ -221,7 +225,8 @@
 		events_showMoreButton: true,
 		giftSubs_autoExpand: true,
 		giftSubs_expandThresholdToggle: false,
-		giftSubs_expandThreshold: 20,
+		giftSubs_expandThreshold: 50,
+		giftSubs_mysterySingle: true,
 		bits_minimumCheer: 0,
 		bits_rewardCost_gigantifiedEmote: 0,
 		bits_rewardCost_messageEffects: 0,
@@ -287,6 +292,7 @@
 		settings[item.key] = item.default;
 	}
 	
+	const settingsSearch = ref('');
 	const settingsDesc = [
 		{
 			key: 'theme', name: 'Theme',
@@ -337,7 +343,11 @@
 							type: 'number', default: 20,
 							min: 1, max: 1000,
 							desc: 'If auto expand is enabled, the user list will automatically expand for a gift count less than or equal to this value.',
-						},
+						}, {
+							key: 'giftSubs_mysterySingle', name: 'Show name for single, random gifts',
+							type: 'boolean', default: true,
+							desc: 'Directly show the name when a single gift sub was randomly picked instead of a list.'
+						}
 					]
 				}, {
 					key: 'bits', name: 'Bits',
@@ -372,6 +382,23 @@
 			]
 		},
 	];
+	const settingsDescFiltered = computed(() => {
+		const searchValue = settingsSearch.value.toLowerCase().trim();
+		return !searchValue ? settingsDesc : settingsDesc.map(({ list, sub, ...rest }) => {
+			return {
+				...rest,
+				list: list.filter(n => n.name.toLowerCase().includes(searchValue) || n.desc.toLowerCase().includes(searchValue)),
+				sub: sub.map(({ list, ...rest }) => {
+					return {
+						...rest,
+						list: list.filter(n => n.name.toLowerCase().includes(searchValue) || n.desc.toLowerCase().includes(searchValue)),
+					};
+				})
+				.filter(n => n.list.length)
+			};
+		})
+		.filter(n => n.list.length || n.sub.length);
+	});
 	
 	loadSettings();
 	watch(settings, (newValue, oldValue) => {
@@ -1097,20 +1124,32 @@
 		#settings-body {
 		}
 		#settings-head {
-			display: flex;
+			display: grid;
+			grid-template-columns: 1fr 1fr 1fr;
 			align-items: center;
+			justify-items: center;
 			gap: 8px;
 			background: hsl(var(--theme-hue), 50%, 14%);
 			border-bottom: 2px solid hsl(var(--theme-hue), 50%, 20%);
 			
+			> :first-child {
+				justify-self: flex-start;
+			}
+			> :last-child {
+				justify-self: flex-end;
+			}
 			#settings-head-text,
 			#settings-head-buttons {
 				padding: 8px;
 			}
 			#settings-head-text {
-				flex: 1;
 				font-weight: 700;
 				align-text: center;
+			}
+			#settings-head-search {
+				display: flex;
+				gap: 4px;
+				align-items: center;
 			}
 			#settings-head-buttons {
 				display: flex;
