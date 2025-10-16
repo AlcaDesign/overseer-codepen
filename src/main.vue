@@ -1,16 +1,18 @@
 <template lang="pug">
 #head
-	#logo Overseer
+	#head-logo Overseer
+	#head-stats
+		div {{ fmt(stats.chatMessages, 'chat message') }}
+	#head-status
+		div(
+			:state="clientState.connected ? 'good' : 'bad'"
+		) Chat
+		div(
+			:state="clientState.channelsJoined.size > 0 ? 'good' : 'bad'"
+		) {{ fmt(clientState.channelsJoined.size, 'Channel') }}
 	#head-buttons
 		.button(@click="settingsIsOpen = !settingsIsOpen")
 			.icon(icon="settings")
-	#status
-		.status-item(
-			:state="clientState.connected ? 'good' : 'bad'"
-		) Chat
-		.status-item(
-			:state="clientState.channelsJoined.size > 0 ? 'good' : 'bad'"
-		) {{ fmt(clientState.channelsJoined.size, 'Channel') }}
 #settings(:showing="settingsIsOpen")
 	#settings-head
 		#settings-head-text Settings
@@ -207,6 +209,10 @@
 		resubs: useTemplateRef('eventRefs.resubs'),
 		bits: useTemplateRef('eventRefs.bits'),
 	};
+	
+	const stats = reactive({
+		chatMessages: 0,
+	});
 	
 	const settingsIsOpen = ref(false);
 	const settings = reactive({
@@ -754,6 +760,7 @@
 	client.on('part', e => clientState.channelsJoined.delete(e.channel.login));
 	
 	client.on('message', e => {
+		stats.chatMessages++;
 		if(e.cheer) {
 			if(e.sharedChat && e.channel.id !== e.sharedChat.channel.id) {
 				return;
@@ -1009,19 +1016,19 @@
 		gap: 8px;
 		padding: 0 4px;
 		
-		#logo {
+		&-logo {
 			flex: 1;
 			text-transform: uppercase;
 			font-size: 14px;
 			font-weight: 700;
 		}
-		#status {
+		&-stats,
+		&-status {
 			display: flex;
 			font-size: 12px;
 			gap: 2px;
 			
-			.status-item {
-				--status-color: #999;
+			> div {
 				display: flex;
 				align-items: center;
 				gap: 4px;
@@ -1030,6 +1037,13 @@
 				background: hsl(var(--theme-hue), 36%, 15%);
 				border: 1px solid hsl(var(--theme-hue), 30%, 24%);
 				user-select: none;
+			}
+		}
+		&-stats {
+		}
+		&-status {
+			> div {
+				--status-color: #999;
 				
 				&:before {
 					content: '';
@@ -1046,6 +1060,8 @@
 					--status-color: #f00;
 				}
 			}
+		}
+		&-buttons {
 		}
 	}
 	#settings {
