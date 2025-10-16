@@ -94,7 +94,7 @@
 	import { fmt, n, formatUsername, getBadgeSubTier, getBadgeSubTierTitle, getBadgeSubIsHighlighted, getBadgeSubMonths, getBadgeSubMonthsTitle } from 'https://codepen.io/Alca/pen/GgoMOOG.js';
 	import OverseerTimestamp from 'https://codepen.io/Alca/pen/RNrVBxO.js';
 	
-	const props = defineProps({
+	const { settings, e, giftedSubsDetailsCheckboxMap } = defineProps({
 		settings: {
 			type: Object,
 			required: true,
@@ -110,17 +110,20 @@
 	});
 	
 	function getGiftDetailsCheckbox() {
-		const eventId = props.e.eventId;
-		if(props.giftedSubsDetailsCheckboxMap.has(eventId)) {
-			return props.giftedSubsDetailsCheckboxMap.get(eventId);
+		const eventId = e.eventId;
+		if(giftedSubsDetailsCheckboxMap.has(eventId)) {
+			return giftedSubsDetailsCheckboxMap.get(eventId);
 		}
-		const newState = props.settings.giftSubs_autoExpand;
-		props.giftedSubsDetailsCheckboxMap.set(eventId, newState);
+		let newState = settings.giftSubs_autoExpand;
+		if(newState && settings.giftSubs_expandThresholdToggle && e.data.count > settings.giftSubs_expandThreshold) {
+			return false;
+		}
+		giftedSubsDetailsCheckboxMap.set(eventId, newState);
 		return newState;
 	}
 	function setGiftDetailsCheckbox(newState) {
-		const eventId = props.e.eventId;
-		props.giftedSubsDetailsCheckboxMap.set(eventId, newState);
+		const eventId = e.eventId;
+		giftedSubsDetailsCheckboxMap.set(eventId, newState);
 	}
 	function getBadgeGiftLevel(data) {
 		const count = typeof data === 'number' ? data : data.count;
