@@ -9,8 +9,8 @@
 			:state="clientState.connected ? 'good' : 'bad'"
 		) Chat
 		.status-item(
-			:state="clientState.channelsJoined > 0 ? 'good' : 'bad'"
-		) {{ fmt(clientState.channelsJoined, 'Channel') }}
+			:state="clientState.channelsJoined.size > 0 ? 'good' : 'bad'"
+		) {{ fmt(clientState.channelsJoined.size, 'Channel') }}
 #settings(:showing="settingsIsOpen")
 	#settings-head
 		#settings-head-text Settings
@@ -18,45 +18,55 @@
 			.button(title="Close" @click="settingsIsOpen = false")
 				.icon(icon="close")
 	#settings-body
-		h1 Theme
-		.flex
-			input(v-model.trim="settings.theme_hue")
-			.picker-container(
-				@click="pickerSetHue"
-				@mousemove="$event.target.matches(':active') && pickerSetHue($event)"
+		template(v-for="group in settingsDesc" :key="group.key")
+			h1 {{ group.name }}
+			.setting-desc(
+				v-for="item in [ ...group.list, ...group.sub.flatMap(n => [ { type: 'sub', key: n.key, name: n.name }, ...n.list ]) ]"
+				:key="item.key"
+				:type="item.type"
 			)
-				.picker-big(:style="{ '--picker-pos': `${settings.theme_hue / 3.6 % 100}%` }")
-		label
-			input(type="checkbox" v-model="settings.theme_colorizeNames")
-			.icon
-			=' Colorize usernames'
-		h1 Feeds
-		label
-			input(type="checkbox" v-model="settings.events_showMoreButton")
-			.icon
-			=' Show "More" button'
-		h1 Events
-		h2 Gifted Subs
-		label
-			input(type="checkbox" v-model="settings.giftSubs_autoExpand")
-			.icon
-			=' Auto expand gift subs'
-		h2 Bits
-		label
-			input(v-model.number="settings.bits_minimumCheer")
-			=' Minimum Cheer bits'
-		label
-			select(v-model="settings.bits_combineCheermotes")
-				option(value="none") None
-				option(value="adjacent") Adjacent
-				option(value="all") All
-			=' Combine Cheermotes (WIP)'
-		label
-			input(v-model.number="settings.bits_rewardCost_gigantifiedEmote")
-			=' Reward Cost in Bits: Gigantified Emote'
-		label
-			input(v-model.number="settings.bits_rewardCost_messageEffects")
-			=' Reward Cost in Bits: Message Effects'
+				template(v-if="item.type === 'hue'")
+					.flex
+						.setting-desc__name {{ (item.name || `(name empty for item.key: "${item.key}")`) ?? `(name missing for item.key: "${item.key}")` }}
+						.setting-desc__reset(:title="settingResetTitle(item)" @click="reset(item)" :is-default="settingIsDefault(item)")
+					.setting-desc__description(v-if="item.desc") {{ item.desc }}
+					.flex
+						input(v-model.trim="settings[item.key]" type="number")
+						.picker-container(
+							@click="settings[item.key] = pickerGetHue($event)"
+							@mousemove="$event.target.matches(':active') && (settings[item.key] = pickerGetHue($event))"
+						)
+							.picker-big(:style="{ '--picker-pos': `${settings[item.key] / 3.6 % 100}%` }")
+				template(v-else-if="item.type === 'boolean'")
+					.flex
+						label
+							input(type="checkbox" v-model="settings[item.key]")
+							.icon
+							=' '
+							.setting-desc__name {{ (item.name || `(name empty for item.key: "${item.key}")`) ?? `(name missing for item.key: "${item.key}")` }}
+						.setting-desc__reset(:title="settingResetTitle(item)" @click="reset(item)" :is-default="settingIsDefault(item)")
+					.setting-desc__description(v-if="item.desc") {{ item.desc }}
+				template(v-else-if="item.type === 'number'")
+					.flex
+						label
+							input(type="number" v-model.number="settings[item.key]" :min="item.min" :max="item.max")
+							=' '
+							.setting-desc__name {{ (item.name || `(name empty for item.key: "${item.key}")`) ?? `(name missing for item.key: "${item.key}")` }}
+						.setting-desc__reset(:title="settingResetTitle(item)" @click="reset(item)" :is-default="settingIsDefault(item)")
+					.setting-desc__description(v-if="item.desc") {{ item.desc }}
+				template(v-else-if="item.type === 'select'")
+					.flex
+						label
+							select(v-model="settings[item.key]")
+								option(v-for="opt in item.options" :key="opt.value" :value="opt.value") {{ opt.display }}
+								=' '
+							.setting-desc__name {{ (item.name || `(name empty for item.key: "${item.key}")`) ?? `(name missing for item.key: "${item.key}")` }}
+						.setting-desc__reset(:title="settingResetTitle(item)" @click="reset(item)" :is-default="settingIsDefault(item)")
+					.setting-desc__description(v-if="item.desc") {{ item.desc }}
+				template(v-else-if="item.type === 'sub'")
+					h2(v-if="item.name") {{ item.name }}
+				template(v-else="")
+					div(style="style: #f44; font-weight: bold;") Setting type unsupported: {{ item.type ?? item }}
 		hr
 		h1 Demo
 		label
@@ -77,6 +87,7 @@
 			input(type="checkbox" v-model="settings.debug_message_doLog")
 			.icon
 			=' Log OverseerMessage data'
+// #events_column(:theme_colorizeNames="settings.theme_colorizeNames")
 #events(:theme_colorizeNames="settings.theme_colorizeNames")
 	.event-container-row(
 		style="grid-auto-columns: minmax(max-content, 5fr) minmax(max-content, 9fr) minmax(max-content, 5fr);"
@@ -199,19 +210,163 @@
 	
 	const settingsIsOpen = ref(false);
 	const settings = reactive({
+		theme_hue: 225,
+		theme_colorizeNames: true,
 		events_showMoreButton: true,
 		giftSubs_autoExpand: true,
+		giftSubs_expandThresholdToggle: false,
+		giftSubs_expandThreshold: 20,
 		bits_minimumCheer: 0,
 		bits_rewardCost_gigantifiedEmote: 0,
 		bits_rewardCost_messageEffects: 0,
 		bits_combineCheermotes: 'adjacent',
-		theme_hue: 225,
-		theme_colorizeNames: true,
 		demo_showButtons: false,
 		demo_streamLanguage: 'none',
 		debug_chat_dontConnect: false,
 		debug_message_doLog: false,
 	});
+	
+	function settingResetTitle(item) {
+		if(('default' in item) === false) {
+			return '';
+		}
+		else if(settingIsDefault(item)) {
+			return 'Currently default';
+		}
+		else if(item.type === 'select') {
+			return `Reset to ${item.options?.find(n => n.value === item.default)?.display ?? '(unknown)'}`;
+		}
+		return `Reset to ${item.default}`;
+	}
+	
+	function settingIsDefault(item) {
+		if(!item.key) {
+			console.warn('Cannot get settings item (missing key)', item);
+			return;
+		}
+		else if((item.key in settings) === false) {
+			console.warn('Cannot get settings item (key not in settings)', item);
+			return;
+		}
+		else if(('default' in item) === false) {
+			// Can't tell
+			return true;
+		}
+		switch(item.type) {
+			case 'number': {
+				const settingValue = settings[item.key];
+				if(typeof settingValue !== 'number') {
+					return parseFloat(settingValue) === item.default;
+				}
+				return settingValue === item.default;
+			}
+		}
+		return settings[item.key] === item.default;
+	}
+	
+	function reset(item) {
+		if(!item.key) {
+			console.warn('Cannot reset settings item (missing key)', item);
+			return;
+		}
+		else if((item.key in settings) === false) {
+			console.warn('Cannot reset settings item (key not in settings)', item);
+			return;
+		}
+		else if(('default' in item) === false) {
+			console.warn('Cannot reset settings item (no default value)', item);
+			return;
+		}
+		// console.log(`Setting ${item.key} (${JSON.stringify(settings[item.key])}) to ${JSON.stringify(item.default)}`);
+		settings[item.key] = item.default;
+	}
+	
+	const settingsDesc = [
+		{
+			key: 'theme', name: 'Theme',
+			list: [
+				{
+					key: 'theme_hue', name: 'Hue',
+					type: 'hue', default: 225,
+					desc: '',
+				}, {
+					key: 'theme_colorizeNames', name: 'Colorize usernames',
+					type: 'boolean', default: true,
+					desc: '',
+				}
+			],
+			sub: [],
+		}, {
+			key: 'feeds', name: 'Feeds',
+			list: [],
+			sub: [
+				{
+					key: 'meta', name: '',
+					list: [
+						{
+							key: 'events_showMoreButton', name: 'Show "More" button',
+							type: 'boolean', default: true,
+							desc: '',
+						},
+					]
+				},
+			],
+		}, {
+			key: 'events', name: 'Events',
+			list: [],
+			sub: [
+				{
+					key: 'giftedSubs', name: 'Gifted Subs',
+					list: [
+						{
+							key: 'giftSubs_autoExpand', name: 'Auto expand',
+							type: 'boolean', default: true,
+							desc: '',
+						}, {
+							key: 'giftSubs_expandThresholdToggle', name: 'Use auto expand threshold',
+							type: 'boolean', default: false,
+							desc: ''
+						}, {
+							key: 'giftSubs_expandThreshold', name: 'Auto expand threshold',
+							type: 'number', default: 20,
+							min: 1, max: 1000,
+							desc: 'If auto expand is enabled, the user list will automatically expand for a gift count less than or equal to this value.',
+						},
+					]
+				}, {
+					key: 'bits', name: 'Bits',
+					list: [
+						{
+							key: 'bits_minimumCheer', name: 'Minimum Cheer Bits',
+							type: 'number', default: 1,
+							min: 1, max: 1000000,
+							desc: 'Hide Cheers with Bits less than this value.',
+						}, {
+							key: 'bits_rewardCost_gigantifiedEmote', name: 'Reward cost in Bits for Gigantified Emotes',
+							type: 'number', default: 0,
+							min: 0, max: 1000000,
+							desc: 'Affects the total value and will be displayed in the badge next to the message. A value of 0 won\'t be counted.',
+						}, {
+							key: 'bits_rewardCost_messageEffects', name: 'Reward cost in Bits for Message Effects',
+							type: 'number', default: 0,
+							min: 0, max: 1000000,
+							desc: 'Affects the total value and will be displayed in the badge next to the message. A value of 0 won\'t be counted.',
+						}, {
+							key: 'bits_combineCheermotes', name: 'Combine Cheermotes',
+							type: 'select', default: 'adjacent',
+							options: [
+								{ value: 'none', display: 'None' },
+								{ value: 'adjacent', display: 'Adjacent' },
+								{ value: 'all', display: 'All' },
+							],
+							desc: 'Simplify the look of bits to reduce spam.',
+						},
+					]
+				}
+			]
+		},
+	];
+	
 	loadSettings();
 	watch(settings, (newValue, oldValue) => {
 		const theme_hue = parseFloat(settings.theme_hue);
@@ -242,12 +397,12 @@
 		applySettings();
 	});
 	
-	function pickerSetHue(e) {
+	function pickerGetHue(e) {
 		function pickerSetWithPadding(x, width) {
 			const padding = 8; // 0.5rem
 			return Math.min(1, Math.max(0, (x - padding) / (width - padding * 2)));
 		}
-		settings.theme_hue = Math.floor(pickerSetWithPadding(e.offsetX, e.target.scrollWidth) * 360 * 10) / 10;
+		return Math.floor(pickerSetWithPadding(e.offsetX, e.target.scrollWidth) * 360 * 10) / 10;
 	}
 	
 	function applySettings() {
@@ -528,45 +683,75 @@
 	
 	const clientState = reactive({
 		connected: false,
-		channelsJoined: 0,
+		channelsJoined: new Set(),
+		channelsToRejoin: [],
 	});
+	let clientJoinAbortController;
+	
+	async function joinChannels(channels) {
+		if(!channels) {
+			return;
+		}
+		else if(typeof channels === 'string') {
+			channels = [ channels ];
+		}
+		if(clientJoinAbortController && !clientJoinAbortController.signal.aborted) {
+			clientJoinAbortController.abort();
+			clientJoinAbortController = null;
+		}
+		let abortController = new AbortController();
+		clientJoinAbortController = abortController;
+		for(const n of channels) {
+			if(abortController.signal.aborted) {
+				break;
+			}
+			client.join(n);
+			await new Promise(r => setTimeout(r, 350));
+		}
+		if(abortController === clientJoinAbortController) {
+			clientJoinAbortController = null;
+		}
+	}
 	
 	let done = false;
-	client.on('connect', () => {
+	client.on('connect', async () => {
 		clientState.connected = true;
-		if(done) return;
+		if(done) {
+			if(clientState.channelsToRejoin) {
+				await joinChannels(clientState.channelsToRejoin);
+			}
+			return;
+		}
 		done = true;
 		const qs = new URLSearchParams(location.search);
-		(async () => {
-			let channels = [];
-			if(qs.has('channel')) {
-				channels = [ ...qs.getAll('channel') ];
+		let channels = [];
+		if(qs.has('channel')) {
+			channels = [ ...qs.getAll('channel') ];
+		}
+		else {
+			const first = location.href.includes('/fullcpgrid/') ? 1 : 100;
+			const qs = new URLSearchParams({ first });
+			if(settings.demo_streamLanguage && settings.demo_streamLanguage !== 'none') {
+				qs.set('language', settings.demo_streamLanguage);
 			}
-			else {
-				const first = location.href.includes('/fullcpgrid/') ? 1 : 100;
-				const qs = new URLSearchParams({ first });
-				if(settings.demo_streamLanguage && settings.demo_streamLanguage !== 'none') {
-					qs.set('language', settings.demo_streamLanguage);
-				}
-				const res = await fetch(`https://helix-proxy.alca.tv/streams?${qs}`);
-				const json = await res.json();
-				channels = json.data.map(n => n.user_login);
-			}
-			for(const n of channels) {
-				client.join(n);
-				await new Promise(r => setTimeout(r, 350));
-			}
-		})();
+			const res = await fetch(`https://helix-proxy.alca.tv/streams?${qs}`);
+			const json = await res.json();
+			channels = json.data.map(n => n.user_login);
+		}
+		await joinChannels(channels);
 	});
 	client.on('close', () => {
+		clientJoinAbortController?.abort();
+		clientJoinAbortController = null;
 		clientState.connected = false;
-		clientState.channelsJoined = 0;
+		clientState.channelsToRejoin = [ ...clientState.channelsJoined ];
+		clientState.channelsJoined.clear();
 	});
 	client.on('join', e => {
-		clientState.channelsJoined++;
+		clientState.channelsJoined.add(e.channel.login);
 		getCheermotes(e.channel.id);
 	});
-	client.on('part', () => clientState.channelsJoined--);
+	client.on('part', e => clientState.channelsJoined.delete(e.channel.login));
 	
 	client.on('message', e => {
 		if(e.cheer) {
@@ -924,6 +1109,7 @@
 			padding: 6px;
 			overflow-y: scroll;
 			scrollbar-width: thin;
+			scrollbar-color: hsl(var(--theme-hue), 20%, 30%) hsla(var(--theme-hue), 20%, 30%, 0.2);
 			
 			hr {
 				margin: 1rem 0;
@@ -943,7 +1129,6 @@
 			.flex {
 				display: flex;
 				gap: 6px;
-				padding: 4px;
 			}
 			label {
 				cursor: pointer;
@@ -990,6 +1175,51 @@
 			}
 			.picker-small {
 				width: 10rem;
+			}
+			.setting-desc {
+				display: flex;
+				flex-direction: column;
+				padding: 6px;
+				gap: 4px;
+				
+				&:empty {
+					display: none;
+				}
+				&[type="sub"] {
+					padding: 0;
+				}
+			}
+			.setting-desc__name {
+				.setting-desc__reset {
+					display: inline-block;
+					vertical-align: center;
+				}
+			}
+			.setting-desc__reset {
+				width: 18px;
+				height: 18px;
+				background-repeat: no-repeat;
+				background-size: contain;
+				background-position: center;
+				background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='%23ddd'%3E%3Cpath d='M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8'/%3E%3C/svg%3E");
+				cursor: pointer;
+				opacity: 1;
+				transition: opacity 500ms;
+				
+				&:not([is-default="true"]):hover {
+					background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='%23fff'%3E%3Cpath d='M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8'/%3E%3C/svg%3E");
+				}
+				&[is-default="true"] {
+					cursor: default;
+					opacity: 0.2;
+					transition: opacity 50ms;
+				}
+			}
+			.setting-desc__description {
+				font-size: 0.875em;
+				color: #ccc;
+				border-left: 2px solid hsl(var(--theme-hue), 50%, 30%);
+				padding-left: 6px;
 			}
 		}
 	}
@@ -1074,6 +1304,7 @@
 		flex-direction: column;
 		overflow-y: scroll;
 		scrollbar-width: thin;
+		scrollbar-color: hsl(var(--theme-hue), 20%, 30%) hsla(var(--theme-hue), 20%, 30%, 0.2);
 		
 		.event-item {
 			flex-shrink: 0;
@@ -1452,6 +1683,9 @@
 		}
 		&[icon="open_external"] {
 			background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%23ccc' viewBox='0 0 24 24'%3E%3Cpath d='M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14q.2 1.8 2 2h14a2 2 0 0 0 2-2v-7h-2zM14 3v2h3.6l-9.8 9.8 1.4 1.4L19 6.4V10h2V3z'/%3E%3C/svg%3E");
+		}
+		&[icon="reset"] {
+			background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='%23ccc'%3E%3Cpath d='M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8'/%3E%3C/svg%3E");
 		}
 	}
 	.username {
