@@ -1,9 +1,9 @@
 <template lang="pug">
 .event-item(
 	v-if="e"
-	:class="{ details: e.data.type === 'mystery' && e.data.count > 1 }"
+	:class="{ details: e.data.type === 'mystery' && (e.data.count > 1 || settings.giftSubs_mysterySingle === false) }"
 )
-	template(v-if="e.data.type === 'mystery' && e.data.count === 1")
+	template(v-if="e.data.type === 'mystery' && e.data.count === 1 && settings.giftSubs_mysterySingle !== false")
 		.event-item-meta
 			OverseerTimestamp(:date="e.timestamp")
 			.badge(
@@ -35,19 +35,6 @@
 					:title="fmt(e.data.count, 'gift')"
 				) {{ e.data.count }}
 			.event-item-data(
-				v-if="e.data.count === 1"
-				:title="`Event in [${e.channel.id}] ${e.channel.login}`"
-			)
-				.username {{ formatUsername(e.user) }}
-				=' gifted '
-				.badge.badge-months.badge-months-minimal(
-					:highlighted="getBadgeSubIsHighlighted(e.data.gifts[0])"
-					:title="getBadgeSubMonthsTitle(e.data.gifts[0])"
-				) {{ getBadgeSubMonths(e.data.gifts[0]) }}
-				=' '
-				.username {{ formatUsername(e.data.gifts[0].user) }}
-			.event-item-data(
-				v-else=""
 				:title="`Event in [${e.channel.id}] ${e.channel.login}`"
 			)
 				label
