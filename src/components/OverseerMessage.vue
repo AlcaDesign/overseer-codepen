@@ -336,7 +336,7 @@
 	.emote {
 		width: 28px;
 		height: 28px;
-		
+
 		&.emote-gigantic {
 			display: block;
 			width: 56px;
@@ -354,7 +354,7 @@
 		align-items: center;
 		gap: 0.125em;
 		vertical-align: middle;
-		
+
 		&[level="1"] {
 			--bits-color: var(--tw-bits-lvl-1-color);
 			--bits-weight: 350;

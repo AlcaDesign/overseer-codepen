@@ -14,7 +14,7 @@
 <script setup>
 	import { formatUsername, fmt, n } from 'https://codepen.io/Alca/pen/GgoMOOG.js';
 	import OverseerTimestamp from 'https://codepen.io/Alca/pen/RNrVBxO.js';
-	
+
 	const props = defineProps({
 		e: {
 			type: Object,

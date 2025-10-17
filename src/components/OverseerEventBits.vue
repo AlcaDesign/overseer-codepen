@@ -36,7 +36,7 @@
 	import { fmt, n, formatUsername, getCheermotesCached, getBadgeBitsLevel, getBadgeBitsReward, getBadgeBitsRewardTitle } from 'https://codepen.io/Alca/pen/GgoMOOG.js';
 	import OverseerTimestamp from 'https://codepen.io/Alca/pen/RNrVBxO.js';
 	import OverseerMessage from 'https://codepen.io/Alca/pen/KwVmEXg.js';
-	
+
 	const props = defineProps({
 		settings: {
 			type: Object,

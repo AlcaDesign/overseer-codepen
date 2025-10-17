@@ -11,7 +11,7 @@
 			:state="clientState.channelsJoined.size > 0 ? 'good' : 'bad'"
 		) {{ fmt(clientState.channelsJoined.size, 'Channel') }}
 	#head-buttons
-		.button(@click="settingsIsOpen = !settingsIsOpen")
+		.button(@click="settingsIsOpen = !settingsIsOpen" tabindex="0")
 			.icon(icon="settings")
 #settings(:showing="settingsIsOpen")
 	#settings-head
@@ -19,11 +19,19 @@
 		#settings-head-search
 			input(v-model="settingsSearch" placeholder="Search")
 			.button(@click="settingsSearch = ''")
-				.icon(icon="close")
+				.icon(icon="close" tabindex="0")
 		#settings-head-buttons
-			.button(title="Close" @click="settingsIsOpen = false")
+			.button(title="Close" @click="settingsIsOpen = false" tabindex="0")
 				.icon(icon="close")
 	#settings-body
+		// .flex-col
+			OverseerEventNewSubs(:e="{ channel: { id: 1, login: 'testchannel', display: 'TestChannel' }, user: { id: 2, login: 'demouser', display: 'DemoUser' }, data: { tier: 1 } }")
+			OverseerEventNewSubs(:e="{ channel: { id: 1, login: 'testchannel', display: 'TestChannel' }, user: { id: 2, login: 'demouser', display: 'DemoUser' }, data: { tier: 1, months: 6 } }")
+			OverseerEventGiftedSubs(
+				:e="{ eventId: `demo:${Math.random().toString()}`, channel: { id: 1, login: 'testchannel', display: 'TestChannel' }, user: { id: 2, login: 'demouser', display: 'DemoUser' }, data: { tier: 1, isPrime: false, months: 1, recipient: { id: 3, login: 'recipient', display: 'Recipient' } } }"
+				:settings="settings"
+				:giftedSubsDetailsCheckboxMap="giftedSubsDetailsCheckboxMap"
+			)
 		template(v-for="group in settingsDescFiltered" :key="group.key")
 			h1 {{ group.name }}
 			.setting-desc(
@@ -34,10 +42,15 @@
 				template(v-if="item.type === 'hue'")
 					.flex
 						.setting-desc__name {{ (item.name || `(name empty for item.key: "${item.key}")`) ?? `(name missing for item.key: "${item.key}")` }}
-						.setting-desc__reset(:title="settingResetTitle(item)" @click="reset(item)" :is-default="settingIsDefault(item)")
+						.setting-desc__reset(
+							:title="settingResetTitle(item)"
+							@click="settingReset(item)"
+							:is-default="settingIsDefault(item)"
+							tabindex="0"
+						)
 					.setting-desc__description(v-if="item.desc") {{ item.desc }}
 					.flex
-						input(v-model.trim="settings[item.key]" type="number")
+						input(v-model.trim="settings[item.key]" type="number" min="0" max="360")
 						.picker-container(
 							@click="settings[item.key] = pickerGetHue($event)"
 							@mousemove="$event.target.matches(':active') && (settings[item.key] = pickerGetHue($event))"
@@ -47,10 +60,15 @@
 					.flex
 						label
 							input(type="checkbox" v-model="settings[item.key]")
-							.icon
+							.icon(tabindex="0")
 							=' '
 							.setting-desc__name {{ (item.name || `(name empty for item.key: "${item.key}")`) ?? `(name missing for item.key: "${item.key}")` }}
-						.setting-desc__reset(:title="settingResetTitle(item)" @click="reset(item)" :is-default="settingIsDefault(item)")
+						.setting-desc__reset(
+							:title="settingResetTitle(item)"
+							@click="settingReset(item)"
+							:is-default="settingIsDefault(item)"
+							tabindex="0"
+						)
 					.setting-desc__description(v-if="item.desc") {{ item.desc }}
 				template(v-else-if="item.type === 'number'")
 					.flex
@@ -58,7 +76,12 @@
 							input(type="number" v-model.number="settings[item.key]" :min="item.min" :max="item.max")
 							=' '
 							.setting-desc__name {{ (item.name || `(name empty for item.key: "${item.key}")`) ?? `(name missing for item.key: "${item.key}")` }}
-						.setting-desc__reset(:title="settingResetTitle(item)" @click="reset(item)" :is-default="settingIsDefault(item)")
+						.setting-desc__reset(
+							:title="settingResetTitle(item)"
+							@click="settingReset(item)"
+							:is-default="settingIsDefault(item)"
+							tabindex="0"
+						)
 					.setting-desc__description(v-if="item.desc") {{ item.desc }}
 				template(v-else-if="item.type === 'select'")
 					.flex
@@ -67,32 +90,17 @@
 								option(v-for="opt in item.options" :key="opt.value" :value="opt.value") {{ opt.display }}
 								=' '
 							.setting-desc__name {{ (item.name || `(name empty for item.key: "${item.key}")`) ?? `(name missing for item.key: "${item.key}")` }}
-						.setting-desc__reset(:title="settingResetTitle(item)" @click="reset(item)" :is-default="settingIsDefault(item)")
+						.setting-desc__reset(
+							:title="settingResetTitle(item)"
+							@click="settingReset(item)"
+							:is-default="settingIsDefault(item)"
+							tabindex="0"
+						)
 					.setting-desc__description(v-if="item.desc") {{ item.desc }}
 				template(v-else-if="item.type === 'sub'")
 					h2(v-if="item.name") {{ item.name }}
 				template(v-else="")
 					div(style="style: #f44; font-weight: bold;") Setting type unsupported: {{ item.type ?? item }}
-		hr
-		h1 Demo
-		label
-			input(type="checkbox" v-model="settings.demo_showButtons")
-			.icon
-			=' Show demo buttons'
-		label
-			select(v-model="settings.demo_streamLanguage")
-				option(value="none") Default
-				option(value="en") English
-			=' Demo mode stream language (requires reload)'
-		h1 Debug
-		label
-			input(type="checkbox" v-model="settings.debug_chat_dontConnect")
-			.icon
-			=" Do not connect to chat (requires reload)"
-		label
-			input(type="checkbox" v-model="settings.debug_message_doLog")
-			.icon
-			=' Log OverseerMessage data'
 // #events_column(:theme_colorizeNames="settings.theme_colorizeNames")
 #events(:theme_colorizeNames="settings.theme_colorizeNames")
 	.event-container-row(
@@ -133,8 +141,8 @@
 				.event-badge {{ fmt(events.raids.length, 'total raid') }}
 				button(v-if="settings.demo_showButtons" @click="demo('raids')") Demo
 			.event-items(ref="eventRefs.raids")
-				OverseerEventRaids(v-for="e in events.raids" :key="e.eventId" :e="e")
-			.more-events(@click="scrollEvents(eventRefs.newSubs)")
+				OverseerEventRaids(v-for="e in filteredRaids" :key="e.eventId" :e="e")
+			.more-events(@click="scrollEvents(eventRefs.raids)")
 	.event-container-row
 		.event-container
 			.event-title
@@ -190,22 +198,22 @@
 <script setup>
 	import { ref, shallowRef, reactive, watch, computed, useTemplateRef, nextTick, onMounted } from 'vue';
 	import tmi from 'https://unpkg.com/@tmi.js/chat@0.6.1/dist/tmi.browser.min.mjs';
-	
+
 	import {
 		STORAGE_KEYS,
 		s, n, fmt, formatUsername,
 		loadCheermotes, getCheermotes,
 	} from 'https://codepen.io/Alca/pen/GgoMOOG.js';
-	
+
 	import OverseerTimestamp from 'https://codepen.io/Alca/pen/RNrVBxO.js';
 	import OverseerMessage from 'https://codepen.io/Alca/pen/KwVmEXg.js';
-	
+
 	import OverseerEventNewSubs from 'https://codepen.io/Alca/pen/ogbGoew.js';
 	import OverseerEventGiftedSubs from 'https://codepen.io/Alca/pen/raxGpvp.js';
 	import OverseerEventRaids from 'https://codepen.io/Alca/pen/vELeWMa.js';
 	import OverseerEventResubs from 'https://codepen.io/Alca/pen/KwVXZMz.js';
 	import OverseerEventBits from 'https://codepen.io/Alca/pen/xbZXpPz.js';
-	
+
 	const eventRefs = {
 		newSubs: useTemplateRef('eventRefs.newSubs'),
 		giftedSubs: useTemplateRef('eventRefs.giftedSubs'),
@@ -213,11 +221,11 @@
 		resubs: useTemplateRef('eventRefs.resubs'),
 		bits: useTemplateRef('eventRefs.bits'),
 	};
-	
+
 	const stats = reactive({
 		chatMessages: 0,
 	});
-	
+
 	const settingsIsOpen = ref(false);
 	const settings = reactive({
 		theme_hue: 225,
@@ -227,6 +235,7 @@
 		giftSubs_expandThresholdToggle: false,
 		giftSubs_expandThreshold: 50,
 		giftSubs_mysterySingle: true,
+		raids_minimumViewers: 0,
 		bits_minimumCheer: 0,
 		bits_rewardCost_gigantifiedEmote: 0,
 		bits_rewardCost_messageEffects: 0,
@@ -236,62 +245,7 @@
 		debug_chat_dontConnect: false,
 		debug_message_doLog: false,
 	});
-	
-	function settingResetTitle(item) {
-		if(('default' in item) === false) {
-			return '';
-		}
-		else if(settingIsDefault(item)) {
-			return 'Currently default';
-		}
-		else if(item.type === 'select') {
-			return `Reset to ${item.options?.find(n => n.value === item.default)?.display ?? '(unknown)'}`;
-		}
-		return `Reset to ${item.default}`;
-	}
-	
-	function settingIsDefault(item) {
-		if(!item.key) {
-			console.warn('Cannot get settings item (missing key)', item);
-			return;
-		}
-		else if((item.key in settings) === false) {
-			console.warn('Cannot get settings item (key not in settings)', item);
-			return;
-		}
-		else if(('default' in item) === false) {
-			// Can't tell
-			return true;
-		}
-		switch(item.type) {
-			case 'number': {
-				const settingValue = settings[item.key];
-				if(typeof settingValue !== 'number') {
-					return parseFloat(settingValue) === item.default;
-				}
-				return settingValue === item.default;
-			}
-		}
-		return settings[item.key] === item.default;
-	}
-	
-	function reset(item) {
-		if(!item.key) {
-			console.warn('Cannot reset settings item (missing key)', item);
-			return;
-		}
-		else if((item.key in settings) === false) {
-			console.warn('Cannot reset settings item (key not in settings)', item);
-			return;
-		}
-		else if(('default' in item) === false) {
-			console.warn('Cannot reset settings item (no default value)', item);
-			return;
-		}
-		// console.log(`Setting ${item.key} (${JSON.stringify(settings[item.key])}) to ${JSON.stringify(item.default)}`);
-		settings[item.key] = item.default;
-	}
-	
+
 	const settingsSearch = ref('');
 	const settingsDesc = [
 		{
@@ -340,13 +294,23 @@
 							desc: ''
 						}, {
 							key: 'giftSubs_expandThreshold', name: 'Auto expand threshold',
-							type: 'number', default: 20,
+							type: 'number', default: 50,
 							min: 1, max: 1000,
 							desc: 'If auto expand is enabled, the user list will automatically expand for a gift count less than or equal to this value.',
 						}, {
 							key: 'giftSubs_mysterySingle', name: 'Show name for single, random gifts',
 							type: 'boolean', default: true,
 							desc: 'Directly show the name when a single gift sub was randomly picked instead of a list.'
+						}
+					]
+				}, {
+					keys: 'raids', name: 'Raids',
+					list: [
+						{
+							key: 'raids_minimumViewers', name: 'Minimum raid viewers',
+							type: 'number', default: 1,
+							min: 1, max: 10000000,
+							desc: 'Hide raids with viewers less than this value.',
 						}
 					]
 				}, {
@@ -380,6 +344,38 @@
 					]
 				}
 			]
+		}, {
+			key: 'demo', name: 'Demo',
+			list: [
+				{
+					key: 'demo_showButtons', name: 'Show demo buttons',
+					type: 'boolean', default: false,
+					desc: '',
+				}, {
+					key: 'demo_streamLanguage', name: 'Demo mode stream language',
+					type: 'select', default: 'none',
+					options: [
+						{ value: 'none', display: 'Default' },
+						{ value: 'en', display: 'English' },
+					],
+					desc: 'When in demo mode, it will join the top ~100 streams on Twitch, including all languages. Requires reload.',
+				},
+			],
+			sub: []
+		}, {
+			key: 'debug', name: 'Debug',
+			list: [
+				{
+					key: 'debug_chat_dontConnect', name: 'Do not connect to chat',
+					type: 'boolean', default: false,
+					desc: 'Requires reload.',
+				}, {
+					key: 'debug_message_doLog', name: 'Log OverseerMessage data',
+					type: 'boolean', default: false,
+					desc: 'Can be very spammy in the console if not limited.',
+				},
+			],
+			sub: []
 		},
 	];
 	const settingsDescFiltered = computed(() => {
@@ -399,14 +395,66 @@
 		})
 		.filter(n => n.list.length || n.sub.length);
 	});
-	
+	function settingIsDefault(item) {
+		if(!item.key) {
+			console.warn('Cannot get settings item (missing key)', item);
+			return;
+		}
+		else if((item.key in settings) === false) {
+			console.warn('Cannot get settings item (key not in settings)', item);
+			return;
+		}
+		else if(('default' in item) === false) {
+			// Can't tell
+			return true;
+		}
+		switch(item.type) {
+			case 'number': {
+				const settingValue = settings[item.key];
+				if(typeof settingValue !== 'number') {
+					return parseFloat(settingValue) === item.default;
+				}
+				return settingValue === item.default;
+			}
+		}
+		return settings[item.key] === item.default;
+	}
+	function settingResetTitle(item) {
+		if(('default' in item) === false) {
+			return '';
+		}
+		else if(settingIsDefault(item)) {
+			return 'Currently default';
+		}
+		else if(item.type === 'select') {
+			return `Reset to ${item.options?.find(n => n.value === item.default)?.display ?? '(unknown)'}`;
+		}
+		return `Reset to ${item.default}`;
+	}
+	function settingReset(item) {
+		if(!item.key) {
+			console.warn('Cannot reset settings item (missing key)', item);
+			return;
+		}
+		else if((item.key in settings) === false) {
+			console.warn('Cannot reset settings item (key not in settings)', item);
+			return;
+		}
+		else if(('default' in item) === false) {
+			console.warn('Cannot reset settings item (no default value)', item);
+			return;
+		}
+		// console.log(`Setting ${item.key} (${JSON.stringify(settings[item.key])}) to ${JSON.stringify(item.default)}`);
+		settings[item.key] = item.default;
+	}
+
 	loadSettings();
 	watch(settings, (newValue, oldValue) => {
 		const theme_hue = parseFloat(settings.theme_hue);
 		if(theme_hue !== theme_hue) {
 			settings.theme_hue = oldValue.theme_hue;
 		}
-		
+
 		if(settings.bits_rewardCost_gigantifiedEmote === '') {
 			settings.bits_rewardCost_gigantifiedEmote = 0;
 		}
@@ -425,11 +473,11 @@
 				settings.bits_rewardCost_messageEffects = oldValue.bits_rewardCost_messageEffects;
 			}
 		}
-		
+
 		saveSettings();
 		applySettings();
 	});
-	
+
 	function pickerGetHue(e) {
 		function pickerSetWithPadding(x, width) {
 			const padding = 8; // 0.5rem
@@ -437,7 +485,7 @@
 		}
 		return Math.floor(pickerSetWithPadding(e.offsetX, e.target.scrollWidth) * 360 * 10) / 10;
 	}
-	
+
 	function applySettings() {
 		if(!settings.events_showMoreButton) {
 			for(const key in eventRefs) {
@@ -445,7 +493,7 @@
 				ele.parentElement.classList.remove('has-more-events');
 			}
 		}
-		
+
 		const hue = parseFloat(settings.theme_hue);
 		if(hue === hue) {
 			document.documentElement.style.setProperty('--theme-hue', `${settings.theme_hue}`);
@@ -473,14 +521,14 @@
 		const json = JSON.stringify(settings);
 		localStorage.setItem(STORAGE_KEYS.settings, json);
 	}
-	
+
 	const bigEmoteState = reactive({ id: '', name: '', image: '' });
 	const bigEmoteImage = useTemplateRef('bigEmoteImageRef');
 	const bigEmoteClose = () => {
 		bigEmoteState.image = '';
 		bigEmoteImage.value.style.width = '112px';
 	};
-	
+
 	class EventEmitter {
 		constructor() {
 			this.listeners = {};
@@ -494,7 +542,7 @@
 			listeners.forEach(cb => cb(...data));
 		}
 	}
-	
+
 	class Mystery extends EventEmitter {
 		static from(e) {
 			const m = new Mystery(
@@ -572,10 +620,10 @@
 		}
 	}
 	const mysteryList = new Map();
-	
+
 	onMounted(() => {
 		applySettings();
-		
+
 		for(const key in eventRefs) {
 			const ele = eventRefs[key].value;
 			let raf;
@@ -590,9 +638,9 @@
 			}, { passive: true });
 		}
 	});
-	
+
 	const demoUuidList = new Set();
-	
+
 	const events = reactive({
 		newSubs: [],
 		giftedSubs: [],
@@ -600,7 +648,15 @@
 		resubs: [],
 		bits: [],
 	});
-	
+
+	const filteredRaids = computed(() => {
+		if(settings.raids_minimumViewers <= 1) {
+			return events.raids;
+		}
+		return events.raids.filter(n => {
+			return n.data.viewers >= settings.raids_minimumViewers;
+		});
+	});
 	const filteredBits = computed(() => {
 		if(settings.bits_minimumCheer <= 1) {
 			return events.bits;
@@ -612,16 +668,16 @@
 			return n.data.bits >= settings.bits_minimumCheer;
 		});
 	});
-	
+
 	const giftedSubsDetailsCheckboxMap = ref(new Map());
-	
+
 	function giftDetailsFoldAll() {
 		giftedSubsDetailsCheckboxMap.value.forEach((_, k) => giftedSubsDetailsCheckboxMap.value.set(k, false));
 	}
 	function giftDetailsUnfoldAll() {
 		giftedSubsDetailsCheckboxMap.value.forEach((_, k) => giftedSubsDetailsCheckboxMap.value.set(k, true));
 	}
-	
+
 	const totalGiftSubs = computed(() => {
 		return events.giftedSubs.reduce((p, n) => {
 			if(n.data.type === 'mystery') {
@@ -661,19 +717,19 @@
 		const cheersCount = events.bits.length - totalPowerUps.value;
 		return `${fmt(totalPowerUps.value, 'Power-Up')}, ${fmt(cheersCount, 'Cheer')}`;
 	});
-	
+
 	function showEmote({ id, name, image }) {
 		bigEmoteState.id = id;
 		bigEmoteState.name = name;
 		bigEmoteState.image = image;
 	}
-	
+
 	function scrollEvents(eleRef) {
 		const ele = eleRef.value;
 		ele.parentElement?.classList.toggle('has-more-events', false);
 		ele.lastElementChild?.scrollIntoView({ behavior: 'instant', block: 'end', container: 'nearest' });
 	}
-	
+
 	function addEvent(type, channelData, user, data, timestamp = Date.now()) {
 		const eventId = crypto.randomUUID();
 		const listElement = eventRefs[type].value;
@@ -694,7 +750,7 @@
 		}
 		return event;
 	}
-	
+
 	function onMysteryDone(m) {
 		addEvent('giftedSubs', m.channel, m.gifter, {
 			type: 'mystery',
@@ -703,9 +759,9 @@
 			gifts: m.gifts
 		}, m.createdAt);
 	}
-	
+
 	loadCheermotes();
-	
+
 	const client = new tmi.Client({
 		channels: []
 	});
@@ -713,14 +769,14 @@
 		client.connect();
 	}
 	window.client = client;
-	
+
 	const clientState = reactive({
 		connected: false,
 		channelsJoined: new Set(),
 		channelsToRejoin: [],
 	});
 	let clientJoinAbortController;
-	
+
 	async function joinChannels(channels) {
 		if(!channels) {
 			return;
@@ -745,7 +801,7 @@
 			clientJoinAbortController = null;
 		}
 	}
-	
+
 	let done = false;
 	client.on('connect', async () => {
 		clientState.connected = true;
@@ -785,7 +841,7 @@
 		getCheermotes(e.channel.id);
 	});
 	client.on('part', e => clientState.channelsJoined.delete(e.channel.login));
-	
+
 	client.on('message', e => {
 		stats.chatMessages++;
 		if(e.cheer) {
@@ -825,11 +881,11 @@
 			}
 		}
 	});
-	
+
 	client.on('raid', e => {
 		addEvent('raids', e.channel, e.user, { viewers: e.viewers });
 	});
-	
+
 	client.on('sub', e => {
 		switch(e.type) {
 			case 'sub': {
@@ -891,7 +947,7 @@
 			}
 		}
 	});
-	
+
 	function demo(type) {
 		const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 		const uuid = crypto.randomUUID();
@@ -907,7 +963,7 @@
 		const subPlanList = [ 'Prime', 'Prime', 'Prime', '1000', '1000', '1000', '2000', '2000', '3000', '3000' ];
 		const color = '#0099ff';
 		let irc = '';
-		
+
 		function createMessage() {
 			const tokens = [];
 			const tokenCount = pick([ 0, 1, 2, 3, 4, 5 ]);
@@ -950,7 +1006,7 @@
 				}, []).join('/')
 			};
 		}
-		
+
 		switch(type) {
 			case 'bits': {
 				// const cheermote = pick([ 'Cheer', 'DoodleCheer', 'cheerwhal', 'Corgo', 'Scoops', 'uni', 'ShowLove', 'Party', 'SeemsGood', 'Pride', 'Kappa', 'FrankerZ', 'HeyGuys', 'DansGame', 'TriHard', 'Kreygasm', '4Head', 'SwiftRage', 'NotLikeThis', 'FailFish', 'VoHiYo', 'PJSalt', 'MrDestructoid', 'bday', 'RIPCheer', 'Shamrock', 'BitBoss', 'Streamlabs', 'Muxy', 'HolidayCheer', 'Goal', 'Charity' ]);
@@ -1012,7 +1068,7 @@
 	@import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@100..900&display=swap');
 	:root {
 		color-scheme: dark;
-		
+
 		--theme-hue: 225;
 		--color-username: hsl(var(--theme-hue), 100%, 67%);
 		--tw-bits-lvl-1-color: #969696;
@@ -1042,7 +1098,7 @@
 		align-items: center;
 		gap: 8px;
 		padding: 0 4px;
-		
+
 		&-logo {
 			flex: 1;
 			text-transform: uppercase;
@@ -1054,7 +1110,7 @@
 			display: flex;
 			font-size: 12px;
 			gap: 2px;
-			
+
 			> div {
 				display: flex;
 				align-items: center;
@@ -1071,7 +1127,7 @@
 		&-status {
 			> div {
 				--status-color: #999;
-				
+
 				&:before {
 					content: '';
 					display: inline-block;
@@ -1097,11 +1153,11 @@
 		background: hsl(var(--theme-hue), 40%, 10%);
 		border: 2px solid hsl(var(--theme-hue), 50%, 20%);
 		box-shadow: 0 4px 12px 8px hsl(var(--theme-hue), 20%, 4%, 0.85);
-		
+
 		width: calc(100vw - 40px);
 		max-width: 80vw;
 		min-width: 540px;
-		
+
 		height: calc(100vh - 40px);
 		max-height: 65vh;
 		min-height: 360px;
@@ -1113,7 +1169,7 @@
 		z-index: 1000;
 		translate: -50% -50%;
 		transition: 200ms transform ease-out, 80ms opacity linear;
-		
+
 		&[showing="false"] {
 			pointer-events: none;
 			transform: perspective(600px) translate3d(0, 100px, -50px);
@@ -1131,7 +1187,7 @@
 			gap: 8px;
 			background: hsl(var(--theme-hue), 50%, 14%);
 			border-bottom: 2px solid hsl(var(--theme-hue), 50%, 20%);
-			
+
 			> :first-child {
 				justify-self: flex-start;
 			}
@@ -1165,7 +1221,7 @@
 			overflow-y: scroll;
 			scrollbar-width: thin;
 			scrollbar-color: hsl(var(--theme-hue), 20%, 30%) hsla(var(--theme-hue), 20%, 30%, 0.2);
-			
+
 			hr {
 				margin: 1rem 0;
 				width: 99%;
@@ -1190,7 +1246,7 @@
 			}
 			input[type="checkbox"]:has(+ .icon) {
 				display: none;
-				
+
 				+ .icon:not([icon]) {
 					background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%23ccc' viewBox='0 0 24 24'%3E%3Cpath d='M19 5v14H5V5zm0-2H5a2 2 0 0 0-2 2v14q.2 1.8 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2'/%3E%3C/svg%3E");
 				}
@@ -1236,7 +1292,7 @@
 				flex-direction: column;
 				padding: 6px;
 				gap: 4px;
-				
+
 				&:empty {
 					display: none;
 				}
@@ -1260,7 +1316,7 @@
 				cursor: pointer;
 				opacity: 1;
 				transition: opacity 500ms;
-				
+
 				&:not([is-default="true"]):hover {
 					background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='%23fff'%3E%3Cpath d='M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8'/%3E%3C/svg%3E");
 				}
@@ -1298,7 +1354,7 @@
 		min-height: 100%;
 		position: relative;
 		overflow: hidden;
-		
+
 		.more-events {
 			position: absolute;
 			bottom: -4px;
@@ -1312,7 +1368,7 @@
 			padding: 4px 10px;
 			border-radius: 6px;
 			transition: translate 275ms ease-in-out;
-			
+
 			&:hover {
 				opacity: 0.97;
 			}
@@ -1338,7 +1394,7 @@
 		gap: 4px;
 		align-items: center;
 		background: hsl(var(--theme-hue), 22%, 10%);
-		
+
 		&-text {
 			flex-grow: 1;
 			font-weight: 700;
@@ -1360,254 +1416,253 @@
 		overflow-y: scroll;
 		scrollbar-width: thin;
 		scrollbar-color: hsl(var(--theme-hue), 20%, 30%) hsla(var(--theme-hue), 20%, 30%, 0.2);
-		
-		.event-item {
-			flex-shrink: 0;
-			display: flex;
-			align-items: baseline;
-			gap: 6px;
-			padding: 2px 4px;
-			overflow: hidden;
-			
-			& + .event-item {
-				border-top: 1px solid hsl(0, 0%, 20%);
-			}
-			.event-item-meta,
-			.details-head {
-				display: flex;
-				align-items: center;
-			}
-			.event-item-meta {
-				gap: 3px;
-				
-				.timestamp {
-					color: #ccc;
-				}
-			}
-			.event-item-data {
-				color: #ddd;
-			}
-			&.details {
-				flex-direction: column;
-				align-items: unset;
-				gap: 0;
-				
-				.event-item-data {
-					flex: 1;
-					color: #ddd;
-					
-					label {
-						display: flex;
-						gap: 4px;
-						cursor: pointer;
-					}
-					input {
-						display: none;
-					}
-				}
-				.summary-marker {
-					--angle: 0deg;
-					flex: 1;
-					text-align: right;
+	}
+	.event-item {
+		flex-shrink: 0;
+		display: flex;
+		align-items: baseline;
+		gap: 6px;
+		padding: 2px 4px;
+		overflow: hidden;
 
-					&:before {
-						content: '';
-						display: inline-block;
-						width: 18px;
-						height: 18px;
-						background-repeat: no-repeat;
-						background-size: contain;
-						background-position: center center;
-						background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='%23ccc'%3E%3Cpath d='m8.6 16.6 4.6-4.6-4.6-4.6L10 6l6 6-6 6z'/%3E%3C/svg%3E");
-						transition: rotate 100ms ease-in-out;
-						rotate: var(--angle);
-					}
-				}
-				.details-head {
-					gap: 6px;
-				}
-				.details-body {
-					display: none;
-					grid-template-columns: repeat(auto-fit, minmax(20ch, 1fr));
-					gap: 2px 6px;
-					border-left: 3px solid hsl(var(--theme-hue), 54%, 36%);
-					box-shadow: -2px 0 1px -1px hsl(var(--theme-hue), 64%, 57%);
-					// padding-left: 4px;
-					background: hsl(var(--theme-hue), 22%, 10%);
-					padding: 6px 4px;
-				}
-				&:has(.event-item-data input:checked) {
-					.summary-marker {
-						--angle: 90deg;
-						
-						&:before {
-							
-						background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='%23fff'%3E%3Cpath d='m8.6 16.6 4.6-4.6-4.6-4.6L10 6l6 6-6 6z'/%3E%3C/svg%3E");
-						}
-					}
-					.details-body {
-						display: grid;
-					}
-				}
+		& + .event-item {
+			border-top: 1px solid hsl(0, 0%, 20%);
+		}
+		.event-item-meta,
+		.details-head {
+			display: flex;
+			align-items: center;
+		}
+		.event-item-meta {
+			gap: 3px;
+
+			.timestamp {
+				color: #ccc;
 			}
-			.timestamp,
-			.badge {
-				font-variant-numeric: tabular-nums;
-			}
-			.timestamp {}
-			.badge {
-				--badge-color-background: hsl(var(--theme-hue), 55%, 28%);
-				--badge-color-border: hsl(var(--theme-hue), 50%, 38%);
-				--badge-color-background-highlight: hsl(calc(var(--theme-hue) - 40), 100%, 25%);
-				--badge-color-border-highlight: hsl(calc(var(--theme-hue) - 40), 100%, 38%);
-				display: inline-block;
-				padding: 1px 3px;
-				background: var(--badge-color-background);
-				border: 1px solid var(--badge-color-border);
-				border-radius: 3px;
-				font-weight: 400;
-				
-				&.badge-mystery {
-					--sub-color: var(--badge-color-background);
-					--badge-color-background-highlight: var(--sub-color);
-					--badge-color-border-highlight: var(--sub-color);
-					display: flex;
-					align-items: center;
-					background: color-mix(in oklch, #000, var(--badge-color-background-highlight) 55%);
-					border-color: color-mix(in oklch, #000, var(--badge-color-border-highlight) 90%);
-					
-					&:before {
-						content: '🎲';
-						font-size: 0.625em;
-						margin-right: 0.25em;
-					}
-					&:not([level]),
-					&[level="0"] {
-						background: var(--badge-color-background-highlight);
-						border-color: var(--badge-color-border-highlight);
-					}
-					&[level="1"] {
-						--sub-color: color-mix(in srgb, black 15%, var(--tw-bits-lvl-1-color));
-					}
-					&[level="2"] {
-						--sub-color: var(--tw-bits-lvl-100-color);
-					}
-					&[level="3"] {
-						--sub-color: var(--tw-bits-lvl-1000-color);
-					}
-					&[level="4"] {
-						--sub-color: var(--tw-bits-lvl-5000-color);
-					}
-					&[level="5"] {
-						--sub-color: var(--tw-bits-lvl-10000-color);
-					}
-					&[level="6"] {
-						--sub-color: var(--tw-bits-lvl-100000-color);
-					}
-				}
-				&.badge-tier {
-					&:is([level="2"], [level="3"]) {
-						background: var(--badge-color-background-highlight);
-						border-color: var(--badge-color-border-highlight);
-					}
-				}
-				&.badge-months {
-					min-width: 4ch;
-					text-align: right;
-					
-					&.badge-months:is([highlighted="true"]) {
-						background: color-mix(in hsl, var(--badge-color-background) 60%, var(--badge-color-background-highlight));
-						border-color: color-mix(in hsl, var(--badge-color-border) 30%, var(--badge-color-border-highlight));
-					}
-					&.badge-months-minimal {
-						min-width: unset;
-					}
-				}
-				&.badge-gift,
-				&.badge-bits-reward,
-				&.badge-bits {
+		}
+		.event-item-data {
+			color: #ddd;
+		}
+		&.details {
+			flex-direction: column;
+			align-items: unset;
+			gap: 0;
+
+			.event-item-data {
+				flex: 1;
+				color: #ddd;
+
+				label {
 					display: flex;
 					gap: 4px;
-					align-items: baseline;
-					
+					cursor: pointer;
+				}
+				input {
+					display: none;
+				}
+			}
+			.summary-marker {
+				--angle: 0deg;
+				flex: 1;
+				text-align: right;
+
+				&:before {
+					content: '';
+					display: inline-block;
+					width: 18px;
+					height: 18px;
+					background-repeat: no-repeat;
+					background-size: contain;
+					background-position: center center;
+					background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='%23ccc'%3E%3Cpath d='m8.6 16.6 4.6-4.6-4.6-4.6L10 6l6 6-6 6z'/%3E%3C/svg%3E");
+					transition: rotate 100ms ease-in-out;
+					rotate: var(--angle);
+				}
+			}
+			.details-head {
+				gap: 6px;
+			}
+			.details-body {
+				display: none;
+				grid-template-columns: repeat(auto-fit, minmax(20ch, 1fr));
+				gap: 2px 6px;
+				border-left: 3px solid hsl(var(--theme-hue), 54%, 36%);
+				box-shadow: -2px 0 1px -1px hsl(var(--theme-hue), 64%, 57%);
+				// padding-left: 4px;
+				background: hsl(var(--theme-hue), 22%, 10%);
+				padding: 6px 4px;
+			}
+			&:has(.event-item-data input:checked) {
+				.summary-marker {
+					--angle: 90deg;
+
 					&:before {
-						content: '';
-						align-self: center;
-						display: inline;
-						width: 14px;
-						height: 14px;
-						background-image: var(--badge-image);
-						background-repeat: no-repeat;
-						background-size: contain;
-					}
-					span {
-						min-width: 4ch;
-						text-align: right;
+
+					background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='%23fff'%3E%3Cpath d='m8.6 16.6 4.6-4.6-4.6-4.6L10 6l6 6-6 6z'/%3E%3C/svg%3E");
 					}
 				}
-				&.badge-gift,
-				&.badge-bits-reward {
-					&:before {
-						width: 16px;
-						height: 16px;
-						margin-right: -2px;
-					}
+				.details-body {
+					display: grid;
 				}
-				&.badge-gift {
-					--badge-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' aria-hidden='true'%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M16 6h2v6h-1v6H3v-6H2V6h2V4.8a2.81 2.81 0 0 1 5.16-1.57L10 4.5l.85-1.27a3 3 0 0 1 .35-.43 2.81 2.81 0 0 1 4.8 2zM6 4.8V6h2.6L7.49 4.34A.81.81 0 0 0 6 4.8m8 0V6h-2.6l1.11-1.66A.81.81 0 0 1 14 4.8zM16 8v2h-5V8zm-1 8v-4h-4v4zM9 8v2H4V8zm0 4H5v4h4z' clip-rule='evenodd'/%3E%3C/svg%3E");
+			}
+		}
+		.timestamp,
+		.badge {
+			font-variant-numeric: tabular-nums;
+		}
+		.timestamp {}
+		.badge {
+			--badge-color-background: hsl(var(--theme-hue), 55%, 28%);
+			--badge-color-border: hsl(var(--theme-hue), 50%, 38%);
+			--badge-color-background-highlight: hsl(calc(var(--theme-hue) - 40), 100%, 25%);
+			--badge-color-border-highlight: hsl(calc(var(--theme-hue) - 40), 100%, 38%);
+			display: inline-block;
+			padding: 1px 3px;
+			background: var(--badge-color-background);
+			border: 1px solid var(--badge-color-border);
+			border-radius: 3px;
+			font-weight: 400;
+
+			&.badge-mystery {
+				--sub-color: var(--badge-color-background);
+				--badge-color-background-highlight: var(--sub-color);
+				--badge-color-border-highlight: var(--sub-color);
+				display: flex;
+				align-items: center;
+				background: color-mix(in oklch, #000, var(--badge-color-background-highlight) 55%);
+				border-color: color-mix(in oklch, #000, var(--badge-color-border-highlight) 90%);
+
+				&:before {
+					content: '🎲';
+					font-size: 0.625em;
+					margin-right: 0.25em;
 				}
-				&.badge-bits-reward {
-					&[type="gigantifiedEmote"] {
-						--badge-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%23ccc' viewBox='2.5 2.5 15 15'%3E%3Cpath d='M10 14a4 4 0 0 0 3.86-3H6.14A4 4 0 0 0 10 14'/%3E%3Cpath d='m10 2.5a7 7 0 100 15 7 7 0 000-15m-.01 13.5a6 6 0 11.03-12 6 6 0 01-.03 12'/%3E%3Ccircle cx='13' cy='8' r='1'/%3E%3Ccircle cx='7' cy='8' r='1'/%3E%3C/svg%3E");
-					}
-					&[type="messageEffects"] {
-						--badge-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%23ccc' viewBox='0 0 24 24'%3E%3Cpath d='m19 9 1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25zM11.5 9.5 9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12zm-1.51 3.49L9 15.17l-.99-2.18L5.83 12l2.18-.99L9 8.83l.99 2.18 2.18.99z'/%3E%3C/svg%3E");
-					}
+				&:not([level]),
+				&[level="0"] {
+					background: var(--badge-color-background-highlight);
+					border-color: var(--badge-color-border-highlight);
 				}
-				&.badge-bits {
+				&[level="1"] {
+					--sub-color: color-mix(in srgb, black 15%, var(--tw-bits-lvl-1-color));
+				}
+				&[level="2"] {
+					--sub-color: var(--tw-bits-lvl-100-color);
+				}
+				&[level="3"] {
+					--sub-color: var(--tw-bits-lvl-1000-color);
+				}
+				&[level="4"] {
+					--sub-color: var(--tw-bits-lvl-5000-color);
+				}
+				&[level="5"] {
+					--sub-color: var(--tw-bits-lvl-10000-color);
+				}
+				&[level="6"] {
+					--sub-color: var(--tw-bits-lvl-100000-color);
+				}
+			}
+			&.badge-tier {
+				&:is([level="2"], [level="3"]) {
+					background: var(--badge-color-background-highlight);
+					border-color: var(--badge-color-border-highlight);
+				}
+			}
+			&.badge-months {
+				min-width: 4ch;
+				text-align: right;
+
+				&.badge-months:is([highlighted="true"]) {
+					background: color-mix(in hsl, var(--badge-color-background) 60%, var(--badge-color-background-highlight));
+					border-color: color-mix(in hsl, var(--badge-color-border) 30%, var(--badge-color-border-highlight));
+				}
+				&.badge-months-minimal {
+					min-width: unset;
+				}
+			}
+			&.badge-gift,
+			&.badge-bits-reward,
+			&.badge-bits {
+				display: flex;
+				gap: 4px;
+				align-items: baseline;
+
+				&:before {
+					content: '';
+					align-self: center;
+					display: inline;
+					width: 14px;
+					height: 14px;
+					background-image: var(--badge-image);
+					background-repeat: no-repeat;
+					background-size: contain;
+				}
+				span {
+					min-width: 4ch;
+					text-align: right;
+				}
+			}
+			&.badge-gift,
+			&.badge-bits-reward {
+				&:before {
+					width: 16px;
+					height: 16px;
+					margin-right: -2px;
+				}
+			}
+			&.badge-gift {
+				--badge-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' aria-hidden='true'%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M16 6h2v6h-1v6H3v-6H2V6h2V4.8a2.81 2.81 0 0 1 5.16-1.57L10 4.5l.85-1.27a3 3 0 0 1 .35-.43 2.81 2.81 0 0 1 4.8 2zM6 4.8V6h2.6L7.49 4.34A.81.81 0 0 0 6 4.8m8 0V6h-2.6l1.11-1.66A.81.81 0 0 1 14 4.8zM16 8v2h-5V8zm-1 8v-4h-4v4zM9 8v2H4V8zm0 4H5v4h4z' clip-rule='evenodd'/%3E%3C/svg%3E");
+			}
+			&.badge-bits-reward {
+				&[type="gigantifiedEmote"] {
+					--badge-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%23ccc' viewBox='2.5 2.5 15 15'%3E%3Cpath d='M10 14a4 4 0 0 0 3.86-3H6.14A4 4 0 0 0 10 14'/%3E%3Cpath d='m10 2.5a7 7 0 100 15 7 7 0 000-15m-.01 13.5a6 6 0 11.03-12 6 6 0 01-.03 12'/%3E%3Ccircle cx='13' cy='8' r='1'/%3E%3Ccircle cx='7' cy='8' r='1'/%3E%3C/svg%3E");
+				}
+				&[type="messageEffects"] {
+					--badge-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='%23ccc' viewBox='0 0 24 24'%3E%3Cpath d='m19 9 1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25zM11.5 9.5 9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12zm-1.51 3.49L9 15.17l-.99-2.18L5.83 12l2.18-.99L9 8.83l.99 2.18 2.18.99z'/%3E%3C/svg%3E");
+				}
+			}
+			&.badge-bits {
+				--bits-color: var(--tw-bits-lvl-1-color);
+				--badge-image: url('https://d3aqoihi2n8ty8.cloudfront.net/actions/cheer/dark/static/1/1.png');
+				// background-image: linear-gradient(to right, var(--bits-color), transparent);
+				box-shadow: 40px 0px 30px -30px var(--bits-color) inset;
+
+				&:before {
+					filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 2px black);
+				}
+				&[level="1"] {
 					--bits-color: var(--tw-bits-lvl-1-color);
 					--badge-image: url('https://d3aqoihi2n8ty8.cloudfront.net/actions/cheer/dark/static/1/1.png');
-					// background-image: linear-gradient(to right, var(--bits-color), transparent);
-					box-shadow: 40px 0px 30px -30px var(--bits-color) inset;
-					
-					&:before {
-						filter: drop-shadow(0px 0px 3px black) drop-shadow(0px 0px 2px black);
-					}
-					&[level="1"] {
-						--bits-color: var(--tw-bits-lvl-1-color);
-						--badge-image: url('https://d3aqoihi2n8ty8.cloudfront.net/actions/cheer/dark/static/1/1.png');
-					}
-					&[level="100"] {
-						--bits-color: var(--tw-bits-lvl-100-color);
-						--badge-image: url('https://d3aqoihi2n8ty8.cloudfront.net/actions/cheer/dark/static/100/1.png');
-					}
-					&[level="1000"] {
-						--bits-color: var(--tw-bits-lvl-1000-color);
-						--badge-image: url('https://d3aqoihi2n8ty8.cloudfront.net/actions/cheer/dark/static/1000/1.png');
-					}
-					&[level="5000"] {
-						--bits-color: var(--tw-bits-lvl-5000-color);
-						--badge-image: url('https://d3aqoihi2n8ty8.cloudfront.net/actions/cheer/dark/static/5000/1.png');
-					}
-					&[level="10000"] {
-						--bits-color: var(--tw-bits-lvl-10000-color);
-						--badge-image: url('https://d3aqoihi2n8ty8.cloudfront.net/actions/cheer/dark/static/10000/1.png');
-					}
-					&[level="100000"] {
-						--bits-color: var(--tw-bits-lvl-100000-color);
-						--badge-image: url('https://d3aqoihi2n8ty8.cloudfront.net/actions/cheer/dark/static/100000/1.png');
-					}
+				}
+				&[level="100"] {
+					--bits-color: var(--tw-bits-lvl-100-color);
+					--badge-image: url('https://d3aqoihi2n8ty8.cloudfront.net/actions/cheer/dark/static/100/1.png');
+				}
+				&[level="1000"] {
+					--bits-color: var(--tw-bits-lvl-1000-color);
+					--badge-image: url('https://d3aqoihi2n8ty8.cloudfront.net/actions/cheer/dark/static/1000/1.png');
+				}
+				&[level="5000"] {
+					--bits-color: var(--tw-bits-lvl-5000-color);
+					--badge-image: url('https://d3aqoihi2n8ty8.cloudfront.net/actions/cheer/dark/static/5000/1.png');
+				}
+				&[level="10000"] {
+					--bits-color: var(--tw-bits-lvl-10000-color);
+					--badge-image: url('https://d3aqoihi2n8ty8.cloudfront.net/actions/cheer/dark/static/10000/1.png');
+				}
+				&[level="100000"] {
+					--bits-color: var(--tw-bits-lvl-100000-color);
+					--badge-image: url('https://d3aqoihi2n8ty8.cloudfront.net/actions/cheer/dark/static/100000/1.png');
 				}
 			}
-			.username {
-				font-weight: 600;
-				display: inline;
-				word-break: break-word;
-				line-break: anywhere;
-			}
-			.message {
-				display: inline;
-			}
+		}
+		.username {
+			font-weight: 600;
+			display: inline;
+			word-break: break-word;
+			line-break: anywhere;
+		}
+		.message {
+			display: inline;
 		}
 	}
 	#big-emote {
@@ -1619,7 +1674,7 @@
 		right: 0;
 		bottom: 0;
 		z-index: 100;
-		
+
 		#big-emote-scrim {
 			position: absolute;
 			top: 0;
@@ -1629,7 +1684,7 @@
 			background: hsl(0, 0%, 0%, 0.5);
 			cursor: pointer;
 		}
-		
+
 		&[show="true"] {
 			display: grid;
 		}
@@ -1646,7 +1701,7 @@
 			border-radius: 0.25rem;
 			border: 2px solid hsl(var(--theme-hue), 30%, 24%);
 			position: relative;
-			
+
 			#big-emote-close {
 				position: absolute;
 				top: 0;
@@ -1665,7 +1720,7 @@
 				cursor: pointer;
 				outline-offset: -2px;
 				transition: outline-offset 100ms ease-in-out;
-				
+
 				&:hover {
 					outline-offset: 0px;
 				}
@@ -1701,10 +1756,10 @@
 	}
 	.button {
 		cursor: pointer;
-		
+
 		&:has(> .icon[icon="settings"]) {
 			transition: rotate 150ms ease-in-out;
-			
+
 			&:hover {
 				rotate: -22.5deg;
 				transition: rotate 225ms ease-in-out;
@@ -1717,7 +1772,7 @@
 		background-repeat: no-repeat;
 		background-size: contain;
 		background-position: center;
-		
+
 		&[icon="fold_all"] {
 			background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='%23ccc'%3E%3Cpath d='M7.41 18.59 8.83 20 12 16.83 15.17 20l1.41-1.41L12 14zm9.18-13.18L15.17 4 12 7.17 8.83 4 7.41 5.41 12 10z'/%3E%3C/svg%3E");
 		}

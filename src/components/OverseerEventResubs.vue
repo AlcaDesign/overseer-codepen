@@ -31,7 +31,7 @@
 	import { n, formatUsername, getBadgeSubTier, getBadgeSubTierTitle, getBadgeSubIsHighlighted, getBadgeSubMonths, getBadgeSubMonthsTitle } from 'https://codepen.io/Alca/pen/GgoMOOG.js';
 	import OverseerTimestamp from 'https://codepen.io/Alca/pen/RNrVBxO.js';
 	import OverseerMessage from 'https://codepen.io/Alca/pen/KwVmEXg.js';
-	
+
 	const props = defineProps({
 		settings: {
 			type: Object,

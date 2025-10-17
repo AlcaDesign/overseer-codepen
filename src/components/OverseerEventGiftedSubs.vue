@@ -5,7 +5,7 @@
 )
 	template(v-if="e.data.type === 'mystery' && e.data.count === 1 && settings.giftSubs_mysterySingle !== false")
 		.event-item-meta
-			OverseerTimestamp(:date="e.timestamp")
+			OverseerTimestamp(v-if="e.timestamp" :date="e.timestamp")
 			.badge(
 				:level="e.data.tier"
 				:title="getBadgeSubTierTitle(e.data)"
@@ -25,13 +25,13 @@
 	template(v-else-if="e.data.type === 'mystery'")
 		.details-head
 			.event-item-meta
-				OverseerTimestamp(:date="e.timestamp")
+				OverseerTimestamp(v-if="e.timestamp" :date="e.timestamp")
 				.badge(
 					:level="e.data.tier"
 					:title="getBadgeSubTierTitle(e.data)"
 				) {{ getBadgeSubTier(e.data) }}
 				.badge.badge-mystery(
-					:level="getBadgeGiftLevel(e.data)"
+					:level="badgeGiftLevel"
 					:title="fmt(e.data.count, 'gift')"
 				) {{ e.data.count }}
 			.event-item-data(
@@ -58,7 +58,7 @@
 				.username {{ formatUsername(g.user) }}
 	template(v-else="")
 		.event-item-meta
-			OverseerTimestamp(:date="e.timestamp")
+			OverseerTimestamp(v-if="e.timestamp" :date="e.timestamp")
 			.badge(
 				:level="e.data.tier"
 				:title="getBadgeSubTierTitle(e.data)"
@@ -78,9 +78,10 @@
 </template>
 
 <script setup>
+	import { computed } from 'vue';
 	import { fmt, n, formatUsername, getBadgeSubTier, getBadgeSubTierTitle, getBadgeSubIsHighlighted, getBadgeSubMonths, getBadgeSubMonthsTitle } from 'https://codepen.io/Alca/pen/GgoMOOG.js';
 	import OverseerTimestamp from 'https://codepen.io/Alca/pen/RNrVBxO.js';
-	
+
 	const { settings, e, giftedSubsDetailsCheckboxMap } = defineProps({
 		settings: {
 			type: Object,
@@ -95,7 +96,18 @@
 			required: true
 		}
 	});
-	
+
+	const badgeGiftLevel = computed(() => {
+		const count = typeof data === 'number' ? data : data.count;
+		if(count >= 200) { return 6; }
+		if(count >= 100) { return 5; }
+		if(count >= 50) { return 4; }
+		if(count >= 20) { return 3; }
+		if(count >= 10) { return 2; }
+		if(count >= 5) { return 1; }
+		return 0;
+	});
+
 	function getGiftDetailsCheckbox() {
 		const eventId = e.eventId;
 		if(giftedSubsDetailsCheckboxMap.has(eventId)) {
@@ -111,16 +123,6 @@
 	function setGiftDetailsCheckbox(newState) {
 		const eventId = e.eventId;
 		giftedSubsDetailsCheckboxMap.set(eventId, newState);
-	}
-	function getBadgeGiftLevel(data) {
-		const count = typeof data === 'number' ? data : data.count;
-		if(count >= 200) { return 6; }
-		if(count >= 100) { return 5; }
-		if(count >= 50) { return 4; }
-		if(count >= 20) { return 3; }
-		if(count >= 10) { return 2; }
-		if(count >= 5) { return 1; }
-		return 0;
 	}
 </script>
 

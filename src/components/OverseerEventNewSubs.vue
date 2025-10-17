@@ -1,7 +1,7 @@
 <template lang="pug">
 .event-item(v-if="e")
 	.event-item-meta
-		OverseerTimestamp(:date="e.timestamp")
+		OverseerTimestamp(v-if="e.timestamp" :date="e.timestamp")
 		.badge.badge-tier(
 			:level="e.data.tier"
 			:title="getBadgeSubTierTitle(e.data)"
@@ -19,7 +19,7 @@
 <script setup>
 	import { formatUsername, getBadgeSubTier, getBadgeSubTierTitle, n } from 'https://codepen.io/Alca/pen/GgoMOOG.js';
 	import OverseerTimestamp from 'https://codepen.io/Alca/pen/RNrVBxO.js';
-	
+
 	const props = defineProps({
 		e: {
 			type: Object,
