@@ -1759,7 +1759,14 @@
 	}
 	.button {
 		cursor: pointer;
+		border-radius: 3px;
 
+		&:hover {
+			background: hsl(0, 0%, 0%, 0.2);
+		}
+		&:active {
+			background: hsl(0, 0%, 0%, 0.35);
+		}
 		&:has(> .icon[icon="settings"]) {
 			transition: rotate 150ms ease-in-out;
 
