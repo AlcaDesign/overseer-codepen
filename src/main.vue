@@ -231,6 +231,7 @@
 		theme_hue: 225,
 		theme_colorizeNames: true,
 		events_showMoreButton: true,
+		events_maxEventsPerCategory: 800,
 		giftSubs_autoExpand: true,
 		giftSubs_expandThresholdToggle: false,
 		giftSubs_expandThreshold: 50,
@@ -737,7 +738,7 @@
 		const channel = { id: channelData.id, login: channelData.login };
 		const event = { eventId, timestamp, channel, user, data };
 		events[type]?.push(event);
-		if((events[type]?.length ?? 0) > 800) {
+		if((events[type]?.length ?? 0) > settings.events_maxEventsPerCategory) {
 			events[type] = events[type].slice(-800);
 		}
 		if(settings.events_showMoreButton) {
