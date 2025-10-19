@@ -201,7 +201,7 @@
 </template>
 
 <script setup>
-	import { ref, shallowRef, reactive, watch, computed, useTemplateRef, nextTick, onMounted } from 'vue';
+	import { ref, reactive, watch, computed, useTemplateRef, nextTick, onMounted } from 'vue';
 	import tmi from 'https://unpkg.com/@tmi.js/chat@0.6.1/dist/tmi.browser.min.mjs';
 
 	import {
