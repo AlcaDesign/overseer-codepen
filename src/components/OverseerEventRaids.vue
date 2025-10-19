@@ -1,5 +1,5 @@
 <template lang="pug">
-.event-item(v-if="e")
+.event-item(v-if="show")
 	.event-item-meta
 		OverseerTimestamp(:date="e.timestamp")
 		.badge(
@@ -12,14 +12,28 @@
 </template>
 
 <script setup>
+	import { computed } from 'vue';
 	import { formatUsername, fmt, n } from 'https://codepen.io/Alca/pen/GgoMOOG.js';
 	import OverseerTimestamp from 'https://codepen.io/Alca/pen/RNrVBxO.js';
 
-	const props = defineProps({
+	const { e, settings } = defineProps({
 		e: {
 			type: Object,
 			required: true
 		},
+		settings: {
+			type: Object,
+		},
+	});
+
+	computed(() => {
+		if(!e || !settings) {
+			return false;
+		}
+		else if(settings.raids_minimumViewers <= 1) {
+			return true;
+		}
+		return e.data.viewers >= settings.raids_minimumViewers;
 	});
 </script>
 

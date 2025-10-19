@@ -141,7 +141,12 @@
 				.event-badge {{ fmt(events.raids.length, 'total raid') }}
 				button(v-if="settings.demo_showButtons" @click="demo('raids')") Demo
 			.event-items(ref="eventRefs.raids")
-				OverseerEventRaids(v-for="e in filteredRaids" :key="e.eventId" :e="e")
+				OverseerEventRaids(
+					v-for="e in events.raids"
+					:key="e.eventId"
+					:e="e"
+					:settings="settings"
+				)
 			.more-events(@click="scrollEvents(eventRefs.raids)")
 	.event-container-row
 		.event-container
@@ -651,14 +656,6 @@
 		bits: [],
 	});
 
-	const filteredRaids = computed(() => {
-		if(settings.raids_minimumViewers <= 1) {
-			return events.raids;
-		}
-		return events.raids.filter(n => {
-			return n.data.viewers >= settings.raids_minimumViewers;
-		});
-	});
 	const filteredBits = computed(() => {
 		if(settings.bits_minimumCheer <= 1) {
 			return events.bits;
