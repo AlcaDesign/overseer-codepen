@@ -175,7 +175,7 @@
 				button(v-if="settings.demo_showButtons" @click="demo('bits')") Demo
 			.event-items(ref="eventRefs.bits")
 				OverseerEventBits(
-					v-for="e in filteredBits"
+					v-for="e in events.bits"
 					:key="e.eventId"
 					:e="e"
 					:settings="settings"
@@ -654,18 +654,6 @@
 		raids: [],
 		resubs: [],
 		bits: [],
-	});
-
-	const filteredBits = computed(() => {
-		if(settings.bits_minimumCheer <= 1) {
-			return events.bits;
-		}
-		return events.bits.filter(n => {
-			if(n.data.rewardType) {
-				return true;
-			}
-			return n.data.bits >= settings.bits_minimumCheer;
-		});
 	});
 
 	const giftedSubsDetailsCheckboxMap = ref(new Map());

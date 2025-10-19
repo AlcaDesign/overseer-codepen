@@ -1,5 +1,5 @@
 <template lang="pug">
-.event-item(v-if="e")
+.event-item(v-if="show")
 	.event-item-meta
 		OverseerTimestamp(:date="e.timestamp")
 		.badge.badge-bits(
@@ -37,7 +37,7 @@
 	import OverseerTimestamp from 'https://codepen.io/Alca/pen/RNrVBxO.js';
 	import OverseerMessage from 'https://codepen.io/Alca/pen/KwVmEXg.js';
 
-	const props = defineProps({
+	const { settings, e } = defineProps({
 		settings: {
 			type: Object,
 			required: true,
@@ -46,6 +46,16 @@
 			type: Object,
 			required: true
 		},
+	});
+
+	const show = computed(() => {
+		if(!e) {
+			return false;
+		}
+		else if(settings.bits_minimumCheer <= 1 || e.data.rewardType) {
+			return true;
+		}
+		return e.data.bits >= settings.bits_minimumCheer;
 	});
 </script>
 
