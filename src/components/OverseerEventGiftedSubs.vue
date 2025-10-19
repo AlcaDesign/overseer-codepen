@@ -98,7 +98,7 @@
 	});
 
 	const badgeGiftLevel = computed(() => {
-		const count = typeof data === 'number' ? data : data.count;
+		const count = typeof e.data === 'number' ? e.data : e.data.count;
 		if(count >= 200) { return 6; }
 		if(count >= 100) { return 5; }
 		if(count >= 50) { return 4; }
