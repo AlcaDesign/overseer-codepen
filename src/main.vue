@@ -733,10 +733,16 @@
 
 	function addEvent(type, channelData, user, data, timestamp = Date.now()) {
 		const eventId = crypto.randomUUID();
-		const listElement = eventRefs[type].value;
-		const isOnBottom = listElement.scrollTop + listElement.clientHeight + 36 >= listElement.scrollHeight;
 		const channel = { id: channelData.id, login: channelData.login };
 		const event = { eventId, timestamp, channel, user, data };
+		if(!events[type]) {
+			throw new Error(`No array for event type ${type}`, { cause: event });
+		}
+		const listElement = eventRefs[type]?.value;
+		if(!listElement) {
+			throw new Error(`No list element for event type ${type}`, { cause: event });
+		}
+		const isOnBottom = listElement.scrollTop + listElement.clientHeight + 36 >= listElement.scrollHeight;
 		events[type]?.push(event);
 		if((events[type]?.length ?? 0) > settings.events_maxEventsPerCategory) {
 			events[type] = events[type].slice(-800);
