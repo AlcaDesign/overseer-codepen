@@ -214,6 +214,8 @@
 	import OverseerEventResubs from 'https://codepen.io/Alca/pen/KwVXZMz.js';
 	import OverseerEventBits from 'https://codepen.io/Alca/pen/xbZXpPz.js';
 
+	const isCodePenGrid = location.href.includes('/fullcpgrid/');
+
 	const eventRefs = {
 		newSubs: useTemplateRef('eventRefs.newSubs'),
 		giftedSubs: useTemplateRef('eventRefs.giftedSubs'),
@@ -479,14 +481,6 @@
 		applySettings();
 	});
 
-	function pickerGetHue(e) {
-		function pickerSetWithPadding(x, width) {
-			const padding = 8; // 0.5rem
-			return Math.min(1, Math.max(0, (x - padding) / (width - padding * 2)));
-		}
-		return Math.floor(pickerSetWithPadding(e.offsetX, e.target.scrollWidth) * 360 * 10) / 10;
-	}
-
 	function applySettings() {
 		if(!settings.events_showMoreButton) {
 			for(const key in eventRefs) {
@@ -522,6 +516,31 @@
 		const json = JSON.stringify(settings);
 		localStorage.setItem(STORAGE_KEYS.settings, json);
 	}
+	function pickerGetHue(e) {
+		function pickerSetWithPadding(x, width) {
+			const padding = 8; // 0.5rem
+			return Math.min(1, Math.max(0, (x - padding) / (width - padding * 2)));
+		}
+		return Math.floor(pickerSetWithPadding(e.offsetX, e.target.scrollWidth) * 360 * 10) / 10;
+	}
+
+	onMounted(() => {
+		applySettings();
+
+		for(const key in eventRefs) {
+			const ele = eventRefs[key].value;
+			let raf;
+			ele.addEventListener('scroll', () => {
+				cancelAnimationFrame(raf);
+				raf = requestAnimationFrame(() => {
+					const isOnBottom = ele.scrollTop + ele.clientHeight + 36 >= ele.scrollHeight;
+					if(isOnBottom) {
+						ele.parentElement?.classList.remove('has-more-events');
+					}
+				});
+			}, { passive: true });
+		}
+	});
 
 	const bigEmoteState = reactive({ id: '', name: '', image: '' });
 	const bigEmoteImage = useTemplateRef('bigEmoteImageRef');
@@ -621,24 +640,6 @@
 		}
 	}
 	const mysteryList = new Map();
-
-	onMounted(() => {
-		applySettings();
-
-		for(const key in eventRefs) {
-			const ele = eventRefs[key].value;
-			let raf;
-			ele.addEventListener('scroll', () => {
-				cancelAnimationFrame(raf);
-				raf = requestAnimationFrame(() => {
-					const isOnBottom = ele.scrollTop + ele.clientHeight + 36 >= ele.scrollHeight;
-					if(isOnBottom) {
-						ele.parentElement?.classList.remove('has-more-events');
-					}
-				});
-			}, { passive: true });
-		}
-	});
 
 	const demoUuidList = new Set();
 
@@ -744,7 +745,7 @@
 		}
 		const isOnBottom = listElement.scrollTop + listElement.clientHeight + 36 >= listElement.scrollHeight;
 		events[type]?.push(event);
-		if((events[type]?.length ?? 0) > settings.events_maxEventsPerCategory) {
+		if(events[type].length > (isCodePenGrid ? 15 : settings.events_maxEventsPerCategory)) {
 			events[type] = events[type].slice(-800);
 		}
 		if(settings.events_showMoreButton) {
@@ -825,7 +826,7 @@
 			channels = [ ...qs.getAll('channel') ];
 		}
 		else {
-			const first = location.href.includes('/fullcpgrid/') ? 1 : 100;
+			const first = isCodePenGrid ? 1 : 100;
 			const qs = new URLSearchParams({ first });
 			if(settings.demo_streamLanguage && settings.demo_streamLanguage !== 'none') {
 				qs.set('language', settings.demo_streamLanguage);
@@ -888,11 +889,9 @@
 			}
 		}
 	});
-
 	client.on('raid', e => {
 		addEvent('raids', e.channel, e.user, { viewers: e.viewers });
 	});
-
 	client.on('sub', e => {
 		switch(e.type) {
 			case 'sub': {
